@@ -22,9 +22,6 @@ $sql = "SELECT
     r.rol_id,
     r.nombre AS rol
 
-    a.area_id,
-    a.nombre AS area_nombre
-
 FROM usuarios u
 JOIN usuarios_empresas ue
     ON ue.usuario_id = u.usuario_id
@@ -34,8 +31,6 @@ JOIN empresas e
     AND e.activa = 1
 JOIN roles r
     ON r.rol_id = ue.rol_id
-JOIN areas a
-    ON a.area_id = ue.area_id
 WHERE
     u.activo = 1
     AND ue.activo = 1

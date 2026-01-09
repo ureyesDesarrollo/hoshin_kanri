@@ -571,7 +571,7 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
             $('#detalle_txtEstrategia').text(t.estrategia);
             $('#detalle_txtEstrategiaDesc').text(t.estrategia_desc || 'Sin descripción adicional');
 
-            $('#detalle_txtMilestone').text(t.milestone);
+            $('#detalle_txtMilestone').text(`${t.milestone} (${t.responsable_milestone})`);
             $('#detalle_txtMilestoneDesc').text(t.milestone_desc || 'Sin descripción adicional');
 
             // Actividad

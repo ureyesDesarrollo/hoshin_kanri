@@ -61,7 +61,7 @@ function renderCardTarea(t) {
             </div>
             <div class="task-detail__content">
               <span class="task-detail__label">Milestone</span>
-              <span class="task-detail__value">${escapeHtml(t.milestone)}</span>
+              <span class="task-detail__value">${escapeHtml(t.milestone)} (${escapeHtml(t.responsable)})</span>
             </div>
           </div>
         </div>

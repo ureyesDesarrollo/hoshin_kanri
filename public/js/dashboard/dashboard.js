@@ -5,6 +5,8 @@ function safeNumber(value) {
 function getSemaforo(porcentaje, totalTareas) {
     if (totalTareas === 0) return 'warning';
     if (porcentaje >= 90) return 'success';
+    if (porcentaje >= 80 && porcentaje < 90) return 'warning';
+    if (porcentaje < 80) return 'danger';
     return 'danger';
 }
 
@@ -20,8 +22,16 @@ function getBadgeInfo(porcentaje, totalTareas) {
     if (porcentaje >= 90) {
         return {
             class: 'bg-success',
-            text: 'Buen avance',
+            text: 'A tiempo',
             icon: 'fas fa-check-circle'
+        };
+    }
+
+    if (porcentaje >= 80 && porcentaje < 90) {
+        return {
+            class: 'bg-warning',
+            text: 'Buen avance',
+            icon: 'fas fa-exclamation-circle'
         };
     }
 
@@ -53,13 +63,15 @@ function loadResponsablesCards() {
             const finalizadas = safeNumber(r.tareas_finalizadas);
             const pendientes = safeNumber(r.tareas_pendientes);
             const vencidas = safeNumber(r.tareas_vencidas);
-            const porcentaje = safeNumber(r.porcentaje_cumplimiento);
+            const semanal = safeNumber(r.porcentaje_cumplimiento);
+            const general = safeNumber(r.porcentaje_general);
+
             const area = r.area_nombre || 'Sin área';
 
             const iniciales = getResponsableIniciales(r.nombre_completo);
 
-            const semaforoClass = getSemaforo(porcentaje, totalTareas);
-            const badgeInfo = getBadgeInfo(porcentaje, totalTareas);
+            const semaforoClass = getSemaforo(semanal, totalTareas);
+            const badgeInfo = getBadgeInfo(semanal, totalTareas);
 
             container.append(`
                 <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
@@ -126,7 +138,8 @@ function loadResponsablesCards() {
                             </div>
 
                             <div class="text-center text-muted small">
-                                Nivel de compromiso: <strong>${porcentaje}%</strong>
+                                Nivel De Compromiso Semanal: <strong>${semanal}%</strong><br>
+                                Nivel De Compromiso General: <strong>${general}%</strong>
                             </div>
                         </div>
 
@@ -785,6 +798,16 @@ $(document).on('click', '.btnAbrirDetalle', function () {
 
 
 $(document).ready(function () {
+    // 1) genera/actualiza la semana actual
+    $.get('/hoshin_kanri/app/kpi/gerentes_snapshot.php', function () {
+        // 2) luego trae el resumen para pintar cards/gráficas
+        $.get('/hoshin_kanri/app/kpi/gerentes_resumen.php', function (resp) {
+            if (!resp.success) return;
+            console.log(resp.general, resp.serie);
+            // aquí ya pintas tu UI
+        }, 'json');
+    }, 'json');
+
     reloadColabDashboard2();
     loadResponsablesCards();
     function animateCounter(selector, target) {

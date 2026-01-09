@@ -79,6 +79,9 @@ SELECT
 
   m.milestone_id,
   m.titulo AS milestone,
+  m.responsable_usuario_id,
+
+  u.nombre_completo AS responsable,
 
   e.estrategia_id,
   e.titulo AS estrategia,
@@ -97,7 +100,7 @@ JOIN milestones m ON m.milestone_id = t.milestone_id
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
 LEFT JOIN objetivo_estrategia oe ON oe.estrategia_id = e.estrategia_id
 LEFT JOIN objetivos o ON o.objetivo_id = oe.objetivo_id AND o.empresa_id = ?
-
+LEFT JOIN usuarios u ON u.usuario_id = m.responsable_usuario_id
 $where
 GROUP BY t.tarea_id
 $orderBy
