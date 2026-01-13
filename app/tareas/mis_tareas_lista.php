@@ -29,16 +29,24 @@ $types = "ii";
 
 /* Filtros */
 if ($filtro === 'pendientes') {
-    $where .= " AND t.completada = 0 AND t.fecha_fin >= CURDATE()";
+    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin >= CURDATE()";
 } elseif ($filtro === 'vencidas') {
-    $where .= " AND t.completada = 0 AND t.fecha_fin < CURDATE()";
+    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin < CURDATE()";
 } elseif ($filtro === 'hoy') {
-    $where .= " AND t.completada = 0 AND t.fecha_fin = CURDATE()";
+    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin = CURDATE()";
 } elseif ($filtro === 'semana') {
-    $where .= " AND t.completada = 0 AND t.fecha_fin BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
+    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
 } elseif ($filtro === 'finalizadas') {
-    $where .= " AND t.completada = 1";
+    // incluye legacy completada=1 aunque estatus no sea 4
+    $where .= " AND (t.estatus = 4 OR t.completada = 1)";
+} elseif ($filtro === 'revision') {
+    $where .= " AND t.estatus = 3";
+} elseif ($filtro === 'rechazadas') {
+    $where .= " AND t.estatus = 5";
+} else {
+    // all: no agregar nada extra
 }
+
 
 /* Búsqueda */
 if ($q !== '') {
@@ -76,6 +84,7 @@ SELECT
   t.fecha_fin,
   t.completada,
   t.completada_en,
+  t.estatus,
 
   m.milestone_id,
   m.titulo AS milestone,
@@ -90,10 +99,13 @@ SELECT
   COALESCE(o.titulo, 'Sin objetivo') AS objetivo,
 
   CASE
-    WHEN t.completada = 1 THEN 'FINALIZADA'
-    WHEN t.completada = 0 AND t.fecha_fin < CURDATE() THEN 'ROJO'
-    ELSE 'VERDE'
-  END AS semaforo
+  WHEN t.estatus = 4 OR t.completada = 1 THEN 'FINALIZADA'
+  WHEN t.estatus = 3 THEN 'REVISION'
+  WHEN t.estatus = 5 THEN 'RECHAZADA'
+  WHEN t.fecha_fin < CURDATE() THEN 'ROJO'
+  WHEN t.fecha_fin = CURDATE() THEN 'HOY'
+  ELSE 'VERDE'
+END AS semaforo
 
 FROM tareas t
 JOIN milestones m ON m.milestone_id = t.milestone_id
@@ -120,11 +132,11 @@ $data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $sqlKpi = "
 SELECT
   COUNT(x.tarea_id) AS total,
-  SUM(CASE WHEN x.completada=1 THEN 1 ELSE 0 END) AS finalizadas,
-  SUM(CASE WHEN x.completada=0 AND x.fecha_fin >= CURDATE() THEN 1 ELSE 0 END) AS pendientes,
-  SUM(CASE WHEN x.completada=0 AND x.fecha_fin < CURDATE() THEN 1 ELSE 0 END) AS vencidas
+  SUM(CASE WHEN x.estatus=4 OR x.completada=1 THEN 1 ELSE 0 END) AS finalizadas,
+  SUM(CASE WHEN x.estatus IN (1,2) AND x.fecha_fin >= CURDATE() THEN 1 ELSE 0 END) AS pendientes,
+  SUM(CASE WHEN x.estatus IN (1,2) AND x.fecha_fin < CURDATE() THEN 1 ELSE 0 END) AS vencidas
 FROM (
-  SELECT DISTINCT t.tarea_id, t.completada, t.fecha_fin
+  SELECT DISTINCT t.tarea_id, t.completada, t.estatus, t.fecha_fin
   FROM tareas t
   JOIN milestones m ON m.milestone_id = t.milestone_id
   JOIN estrategias e ON e.estrategia_id = m.estrategia_id
@@ -132,6 +144,7 @@ FROM (
     AND e.empresa_id = ?
 ) x
 ";
+
 $stmt = $conn->prepare($sqlKpi);
 $stmt->bind_param("ii", $usuarioId, $empresaId);
 $stmt->execute();

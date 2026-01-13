@@ -260,18 +260,22 @@ require_once '../app/layout/sidebar.php';
                 <div class="col-sm-4">
                   <div class="card border-0 shadow-sm h-100">
                     <div class="card-body text-center">
-                      <div class="text-muted small mb-1">Pendientes</div>
-                      <div class="fw-bold fs-3 text-warning" id="detallePendientes">0</div>
-                      <div class="small text-muted"><i class="fas fa-clock me-1"></i>En curso</div>
+                      <div class="text-muted small mb-1">Vencidas</div>
+                      <div class="fw-bold fs-3 text-danger" id="detalleVencidas">0</div>
+                      <div class="small text-muted">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span id="detalleVencidasMeta">0 abiertas · 0 tarde</span>
+                      </div>
                     </div>
                   </div>
                 </div>
+
 
                 <div class="col-sm-4">
                   <div class="card border-0 shadow-sm h-100">
                     <div class="card-body text-center">
                       <div class="text-muted small mb-1">Vencidas</div>
-                      <div class="fw-bold fs-3 text-danger" id="detalleVencidas">0</div>
+                      <div class="fw-bold fs-3 text-danger" id="detalleVencidasFueraTiempo">0</div>
                       <div class="small text-muted"><i class="fas fa-exclamation-triangle me-1"></i>Fuera de tiempo</div>
                     </div>
                   </div>

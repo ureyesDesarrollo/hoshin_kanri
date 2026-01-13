@@ -48,12 +48,12 @@ function loadResponsablesCards() {
 
     $.get('/hoshin_kanri/app/dashboard/responsables.php', function (resp) {
 
-        if (!resp.success || resp.data.length === 0) {
+        if (!resp.success || !resp.data || resp.data.length === 0) {
             container.html(`
-                <div class="col-12 text-center text-muted py-5">
-                    No hay responsables disponibles
-                </div>
-            `);
+        <div class="col-12 text-center text-muted py-5">
+          No hay responsables disponibles
+        </div>
+      `);
             return;
         }
 
@@ -61,109 +61,141 @@ function loadResponsablesCards() {
 
             const totalTareas = safeNumber(r.total_tareas);
             const finalizadas = safeNumber(r.tareas_finalizadas);
-            const pendientes = safeNumber(r.tareas_pendientes);
-            const vencidas = safeNumber(r.tareas_vencidas);
-            const semanal = safeNumber(r.porcentaje_cumplimiento);
+
+            // NUEVO: rojas separadas + total
+            const vencidasAbiertas = safeNumber(r.tareas_vencidas_abiertas);
+            const completadasTarde = safeNumber(r.tareas_completadas_tarde);
+            const rojasTotal = safeNumber(r.tareas_vencidas_total); // vencidas total
+
+            const semanal = safeNumber(r.porcentaje_semanal);
             const general = safeNumber(r.porcentaje_general);
 
             const area = r.area_nombre || 'Sin área';
+            const isNova = (r.area_nombre || '').toLowerCase().includes('nova');
 
             const iniciales = getResponsableIniciales(r.nombre_completo);
 
+            // Semáforo / badge (semanal como antes)
             const semaforoClass = getSemaforo(semanal, totalTareas);
             const badgeInfo = getBadgeInfo(semanal, totalTareas);
 
             container.append(`
-                <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-                    <div class="card responsable-card border-0 h-100">
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+          <div class="card responsable-card border-0 h-100">
 
-                        <!-- Header -->
-                        <div class="card-header bg-primary bg-opacity-10 border-0 pb-0 pt-4">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
+            <!-- Header -->
+            <div class="card-header ${isNova ? 'bg-success bg-opacity-10' : 'bg-primary bg-opacity-10'} border-0 pb-0 pt-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
 
-                                <div class="position-relative">
-                                    <div class="avatar-lg bg-white border border-3 border-primary">
-                                        <div class="avatar-title text-primary fw-bold fs-4">
-                                            ${iniciales}
-                                        </div>
-                                    </div>
-                                    <span class="status-dot ${semaforoClass}
-                                        position-absolute bottom-0 end-0 translate-middle"></span>
-                                </div>
+                <div class="position-relative">
+                  <div class="avatar-lg bg-white border border-3 ${isNova ? 'border-success' : 'border-primary'}">
+                    <div class="avatar-title text-${isNova ? 'success' : 'primary'} fw-bold fs-4">
+                      ${iniciales}
+                    </div>
+                  </div>
+                  <span class="status-dot ${semaforoClass}
+                    position-absolute bottom-0 end-0 translate-middle"></span>
+                </div>
 
-                                <div class="text-end">
-                                    <span class="badge ${badgeInfo.class} rounded-pill px-3 py-2">
-                                        <i class="${badgeInfo.icon} me-1"></i>
-                                        ${badgeInfo.text}
-                                    </span>
-                                </div>
-                            </div>
+                <div class="text-end">
+                  <span class="badge ${badgeInfo.class} rounded-pill px-3 py-2">
+                    <i class="${badgeInfo.icon} me-1"></i>
+                    ${badgeInfo.text}
+                  </span>
+                </div>
+              </div>
 
-                            <div class="mb-3">
-                                <h4 class="fw-bold mb-1">${r.nombre_completo}</h4>
-                                <p class="text-muted mb-0">
-                                    <i class="fas fa-briefcase me-2"></i>
-                                    ${r.rol} - ${area}
-                                </p>
-                            </div>
+              <div class="mb-3">
+                <h4 class="fw-bold mb-1">${r.nombre_completo}</h4>
+                <p class="text-muted mb-0">
+                  <i class="fas fa-briefcase me-2"></i>
+                  ${r.rol} - ${area}
+                </p>
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div class="card-body pt-3">
+              <div class="row g-2 mb-4">
+                <div class="col-4">
+                  <div class="text-center p-2">
+                    <div class="fw-bold text-primary fs-5">${totalTareas}</div>
+                    <div class="text-muted small mt-1">Actividades</div>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <div class="text-center p-2">
+                    <div class="fw-bold text-success fs-5">${finalizadas}</div>
+                    <div class="text-muted small mt-1">Finalizadas</div>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <div class="text-center p-2">
+                    <div class="fw-bold text-danger fs-5">${rojasTotal}</div>
+                    <div class="text-muted small mt-1">Vencidas</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="d-flex align-items-center bg-light p-3 rounded">
+                    <div class="me-3 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4 ${vencidasAbiertas > 0 ? 'text-danger' : 'text-muted'}">
+                        ${vencidasAbiertas}
                         </div>
-
-                        <!-- Body -->
-                        <div class="card-body pt-3">
-                            <div class="row g-2 mb-4">
-                                <div class="col-3">
-                                    <div class="text-center p-2">
-                                        <div class="fw-bold text-primary fs-5">${totalTareas}</div>
-                                        <div class="text-muted small mt-1">Actividades</div>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="text-center p-2">
-                                        <div class="fw-bold text-success fs-5">${finalizadas}</div>
-                                        <div class="text-muted small mt-1">Finalizadas</div>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="text-center p-2">
-                                        <div class="fw-bold text-warning fs-5">${pendientes}</div>
-                                        <div class="text-muted small mt-1">Pendientes</div>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="text-center p-2">
-                                        <div class="fw-bold text-danger fs-5">${vencidas}</div>
-                                        <div class="text-muted small mt-1">Vencidas</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="text-center text-muted small">
-                                Nivel De Compromiso Semanal: <strong>${semanal}%</strong><br>
-                                Nivel De Compromiso General: <strong>${general}%</strong>
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="card-footer bg-transparent border-0 pt-0">
-                            <div class="d-grid">
-                                <button
-                                    class="btn btn-outline-primary btn-lg btnVerResponsable py-2"
-                                    data-id="${r.usuario_id}">
-                                    <span class="d-flex align-items-center justify-content-center">
-                                        Ver detalles
-                                        <i class="fas fa-arrow-right ms-2"></i>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
+                        <div class="small text-muted">Vencidas abiertas</div>
+                    </div>
                     </div>
                 </div>
-            `);
+                <div class="col-6">
+                    <div class="d-flex align-items-center bg-light p-3 rounded">
+                    <div class="me-3 text-warning">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4 ${completadasTarde > 0 ? 'text-warning' : 'text-muted'}">
+                        ${completadasTarde}
+                        </div>
+                        <div class="small text-muted">Completadas tarde</div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+
+              <div class="text-center text-muted small">
+                Nivel de Compromiso Semanal: <strong>${semanal}%</strong><br>
+                Nivel de Compromiso General: <strong>${general}%</strong>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="card-footer bg-transparent border-0 pt-0">
+              <div class="d-grid">
+                <button
+                  class="btn btn-outline-primary btn-lg btnVerResponsable py-2"
+                  data-id="${r.usuario_id}">
+                  <span class="d-flex align-items-center justify-content-center">
+                    Ver detalles
+                    <i class="fas fa-arrow-right ms-2"></i>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `);
         });
 
     }, 'json');
 }
+
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -180,19 +212,36 @@ function chipLevel(semaforo, rojas) {
     return { cls: 'hk-chip-success', icon: 'fa-check-circle', text: 'En tiempo' };
 }
 
-function chipTarea(semaforo) {
-    if (semaforo === 'ROJO') return { cls: 'hk-chip-danger', icon: 'fa-exclamation-circle', text: 'Vencida' };
-    if (semaforo === 'VERDE') return { cls: 'hk-chip-success', icon: 'fa-check-circle', text: 'En tiempo' };
-    return { cls: 'hk-chip-muted', icon: 'fa-minus-circle', text: 'Sin tarea' };
+function chipTarea(t) {
+    const est = parseInt(t.estatus ?? 0, 10);
+    const comp = parseInt(t.completada ?? 0, 10);
+
+    if (est === 5) return { cls: 'hk-chip-danger', icon: 'fa-times-circle', text: 'Rechazada' };
+    if (est === 6) return { cls: 'hk-chip-danger', icon: 'fa-exclamation-circle', text: 'Completada fuera de tiempo' };
+    if (comp === 1 || est === 4) return { cls: 'hk-chip-success', icon: 'fa-check-circle', text: 'Aprobada' };
+    if (t.semaforo === 'ROJO') return { cls: 'hk-chip-danger', icon: 'fa-exclamation-circle', text: 'Vencida' };
+    if (est === 2) return { cls: 'hk-chip-warning', icon: 'fa-play-circle', text: 'En progreso' };
+    if (est === 3) return { cls: 'hk-chip-info', icon: 'fa-search', text: 'En revisión' };
+    if (est === 1) return { cls: 'hk-chip-info', icon: 'fa-folder-open', text: 'Abierta' };
+
+    return { cls: 'hk-chip-muted', icon: 'fa-minus-circle', text: 'Sin estatus' };
 }
 
-function getHeaderStatusByResumen(semaforo, total) {
+
+
+function getHeaderStatusByResumen(semaforo, total, vencidasAbiertas = 0, fueraTiempo = 0) {
     if (total === 0 || semaforo === 'WARNING') {
         return { dot: 'bg-warning', badge: 'bg-warning text-dark', text: 'Sin actividades' };
     }
-    if (semaforo === 'ROJO') return { dot: 'bg-danger', badge: 'bg-danger', text: 'En rojo' };
+
+    // Rojo si hay abiertas vencidas o completadas fuera de tiempo
+    if (semaforo === 'ROJO' || parseInt(vencidasAbiertas, 10) > 0 || parseInt(fueraTiempo, 10) > 0) {
+        return { dot: 'bg-danger', badge: 'bg-danger', text: 'En rojo' };
+    }
+
     return { dot: 'bg-success', badge: 'bg-success', text: 'En tiempo' };
 }
+
 
 function loadDetalleResponsable(usuarioId) {
     $('#accordionDetalle').html('<div class="text-center py-4">Cargando...</div>');
@@ -211,17 +260,38 @@ function loadDetalleResponsable(usuarioId) {
         const iniciales = getResponsableIniciales(r.nombre);
         $('#detalleIniciales').text(iniciales);
 
-        $('#detallePorcentaje').text(r.porcentaje + '%');
-        $('#detalleFinalizadas').text(r.finalizadas);
-        $('#detalleFinalizadas2').text(r.finalizadas);
-        $('#detallePendientes').text(r.pendientes);
-        $('#detalleVencidas').text(r.vencidas);
-        $('#detalleTotal').text(r.total);
+        const total = parseInt(r.total || 0, 10);
 
-        const p = (r.total === 0 ? 0 : r.porcentaje);
+        const aprobadas = parseInt(r.completadas_a_tiempo || 0, 10);
+        const fueraTiempo = parseInt(r.completadas_fuera_tiempo || 0, 10);
+
+        const vencidasAbiertas = parseInt(r.vencidas_abiertas ?? 0, 10);
+        const vencidasTotal = parseInt(r.vencidas_total ?? (vencidasAbiertas + fueraTiempo), 10);
+
+        // pendientes = lo que NO está aprobado a tiempo ni fuera de tiempo
+        const pendientes = Math.max(0, total - aprobadas - fueraTiempo);
+
+        $('#detalleFinalizadas').text(aprobadas);
+        $('#detalleFinalizadas2').text(aprobadas);
+        $('#detallePendientes').text(pendientes);
+        $('#detalleVencidasFueraTiempo').text(fueraTiempo);
+
+        // “Vencidas” ahora es total (abiertas + tardías)
+        $('#detalleVencidas').text(vencidasTotal);
+
+        // meta debajo: abiertas vs tarde
+        $('#detalleVencidasMeta').text(`${vencidasAbiertas} abiertas · ${fueraTiempo} tarde`);
+
+
+        $('#detalleTotal').text(total);
+        $('#detallePorcentaje').text(r.porcentaje + '%');
+
+        const p = r.porcentaje;
+        console.log(p);
         $('#detalleProgress').css('width', p + '%');
 
-        const st = getHeaderStatusByResumen(r.semaforo, r.total);
+        const st = getHeaderStatusByResumen(r.semaforo, total, vencidasAbiertas, fueraTiempo);
+
         $('#detalleDot').attr('class',
             `position-absolute bottom-0 end-0 translate-middle p-2 border border-2 border-white rounded-circle ${st.dot}`
         );
@@ -238,7 +308,8 @@ function renderTareas(tareas) {
 
     let html = `<div class="d-grid gap-2 mt-2">`;
     tareas.forEach(t => {
-        const chip = chipTarea(t.semaforo);
+        const chip = chipTarea(t);
+        const estado = t.estatus_txt || '';
         const fechas = `${t.fecha_inicio ?? ''} → ${t.fecha_fin ?? ''}`;
 
         html += `
@@ -246,7 +317,7 @@ function renderTareas(tareas) {
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div>
             <div class="fw-semibold">${escapeHtml(t.tarea)}</div>
-            <div class="small text-muted">${fechas}</div>
+            <div class="small text-muted">${fechas} · <span class="fw-semibold">${estado}</span></div>
           </div>
           <span class="hk-chip ${chip.cls}">
             <i class="fas ${chip.icon}"></i> ${chip.text}
@@ -351,21 +422,10 @@ function renderAccordion(data) {
         });
     });
 
-    $('#detalleMeta').html(`
-    <span class="me-2">Total tareas: <span class="hk-kpi">${totalT}</span></span>
-    <span>Rojas: <span class="hk-kpi">${rojasT}</span></span>
-  `);
-
     (data || []).forEach(obj => {
         idx++;
         const key = `obj_${idx}`;
         const chip = chipLevel(obj.semaforo, obj.rojas);
-
-        let totalObj = 0;
-        (obj.estrategias || []).forEach(e => {
-            (e.milestones || []).forEach(m => totalObj += (m.tareas || []).length);
-        });
-        const badgeTotal = `<span class="badge bg-primary ms-2">${totalObj} tareas</span>`;
 
         html += `
       <div class="accordion-item mb-2">
@@ -373,7 +433,6 @@ function renderAccordion(data) {
           <button class="accordion-button collapsed" type="button"
                   data-bs-toggle="collapse" data-bs-target="#${key}">
             🎯 <span class="fw-semibold">${escapeHtml(obj.objetivo || 'Sin objetivo')}</span>
-            ${badgeTotal}
             <span class="ms-2 hk-chip ${chip.cls}">
               <i class="fas ${chip.icon}"></i> ${chip.text}
             </span>
@@ -390,29 +449,6 @@ function renderAccordion(data) {
     });
 
     $('#accordionDetalle').html(html);
-    setupDetalleSearch();
-}
-
-function setupDetalleSearch() {
-    const $input = $('#detalleSearch');
-    $input.off('input').on('input', function () {
-        const q = ($(this).val() || '').toLowerCase().trim();
-        if (!q) {
-            $('#accordionDetalle .accordion-item').show();
-            $('#accordionDetalle .hk-task').show();
-            return;
-        }
-
-        $('#accordionDetalle .accordion-item').each(function () {
-            const text = $(this).text().toLowerCase();
-            $(this).toggle(text.includes(q));
-        });
-
-        $('#accordionDetalle .hk-task').each(function () {
-            const text = $(this).text().toLowerCase();
-            $(this).toggle(text.includes(q));
-        });
-    });
 }
 
 // ====================================================================================== //
@@ -800,12 +836,12 @@ $(document).on('click', '.btnAbrirDetalle', function () {
 $(document).ready(function () {
     // 1) genera/actualiza la semana actual
     $.get('/hoshin_kanri/app/kpi/gerentes_snapshot.php', function () {
-        // 2) luego trae el resumen para pintar cards/gráficas
+        /* // 2) luego trae el resumen para pintar cards/gráficas
         $.get('/hoshin_kanri/app/kpi/gerentes_resumen.php', function (resp) {
             if (!resp.success) return;
             console.log(resp.general, resp.serie);
             // aquí ya pintas tu UI
-        }, 'json');
+        }, 'json'); */
     }, 'json');
 
     reloadColabDashboard2();

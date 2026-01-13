@@ -1,236 +1,287 @@
 <?php
-// /hoshin_kanri/app/dashboard/responsable_detalle.php
+header('Content-Type: application/json; charset=utf-8');
+
 require_once __DIR__ . '/../core/db.php';
 require_once __DIR__ . '/../core/auth.php';
 
-header('Content-Type: application/json; charset=utf-8');
 auth_require();
-
 $conn = db();
-$empresaId = (int)($_SESSION['usuario']['empresa_id'] ?? 0);
+
 $usuarioId = (int)($_GET['usuario_id'] ?? 0);
 
-if ($empresaId <= 0 || $usuarioId <= 0) {
-  echo json_encode(['success' => false, 'message' => 'Parámetros inválidos']);
+if ($usuarioId <= 0) {
+  echo json_encode(['success' => false, 'msg' => 'Usuario inválido'], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
 /* ============================================================
-   1) RESUMEN POR RESPONSABLE (GERENTE)
-   - total / finalizadas / pendientes / vencidas
-   - % cumplimiento
-   - semáforo general: ROJO si vencidas > 0, WARNING si total=0, VERDE si no
+   1) RESUMEN GLOBAL DEL GERENTE
+   Solo tareas de estrategias donde el usuario es responsable
+   - Aprobadas (estatus=4)
+   - Completadas tarde (estatus=6)
+   - Vencidas abiertas (estatus IN 1,2,3,5 y fecha_fin < CURDATE())
+   - Vencidas total = vencidas_abiertas + completadas_tarde
 ============================================================ */
 $sqlResumen = "
 SELECT
-  u.usuario_id,
-  u.nombre_completo,
-  r.nombre AS rol,
-  a.area_id,
-  a.nombre AS area_nombre,
+    u.nombre_completo AS nombre,
+    r.nombre AS rol,
+    a.nombre AS area_nombre,
 
-  COALESCE(COUNT(t.tarea_id), 0) AS total_tareas,
-  COALESCE(SUM(CASE WHEN t.completada = 1 THEN 1 ELSE 0 END), 0) AS finalizadas,
-  COALESCE(SUM(CASE WHEN t.completada = 0 AND t.fecha_fin >= CURDATE() THEN 1 ELSE 0 END), 0) AS pendientes,
-  COALESCE(SUM(CASE WHEN t.completada = 0 AND t.fecha_fin < CURDATE() THEN 1 ELSE 0 END), 0) AS vencidas,
+    COUNT(DISTINCT t.tarea_id) AS total,
 
-  CASE
-    WHEN COUNT(t.tarea_id) = 0 THEN 0
-    ELSE ROUND((SUM(CASE WHEN t.completada = 1 THEN 1 ELSE 0 END) / COUNT(t.tarea_id)) * 100, 0)
-  END AS porcentaje
+    COALESCE(SUM(t.estatus = 4),0) AS completadas_a_tiempo,
+    COALESCE(SUM(t.estatus = 6),0) AS completadas_fuera_tiempo,
+
+    COALESCE(SUM(t.estatus IN (1,2,3,5) AND t.fecha_fin < CURDATE()),0) AS vencidas_abiertas,
+
+    (
+      COALESCE(SUM(t.estatus IN (1,2,3,5) AND t.fecha_fin < CURDATE()),0)
+      +
+      COALESCE(SUM(t.estatus = 6),0)
+    ) AS vencidas_total
+
 FROM usuarios u
-JOIN usuarios_empresas ue
-  ON ue.usuario_id = u.usuario_id
- AND ue.empresa_id = ?
- AND ue.activo = 1
+JOIN usuarios_empresas ue ON ue.usuario_id = u.usuario_id AND ue.activo = 1
 JOIN roles r ON r.rol_id = ue.rol_id
-LEFT JOIN estrategias e
-  ON e.empresa_id = ue.empresa_id
- AND e.responsable_usuario_id = u.usuario_id
-LEFT JOIN milestones m ON m.estrategia_id = e.estrategia_id
-LEFT JOIN tareas t ON t.milestone_id = m.milestone_id
 LEFT JOIN areas a ON a.area_id = ue.area_id
+
+JOIN estrategias e ON e.responsable_usuario_id = u.usuario_id
+JOIN milestones m ON m.estrategia_id = e.estrategia_id
+JOIN tareas t ON t.milestone_id = m.milestone_id
+
 WHERE u.usuario_id = ?
-  AND r.nombre = 'GERENTE'
-GROUP BY u.usuario_id, u.nombre_completo, r.nombre
 ";
 
 $stmt = $conn->prepare($sqlResumen);
-$stmt->bind_param('ii', $empresaId, $usuarioId);
-$stmt->execute();
-$resumen = $stmt->get_result()->fetch_assoc();
-
-if (!$resumen) {
-  echo json_encode(['success' => false, 'message' => 'Responsable no encontrado o no es GERENTE']);
+if (!$stmt) {
+  echo json_encode(['success' => false, 'msg' => 'Error prepare resumen: ' . $conn->error], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
-$semaforoGeneral = 'VERDE';
-if ((int)$resumen['total_tareas'] === 0) $semaforoGeneral = 'WARNING';
-if ((int)$resumen['vencidas'] > 0) $semaforoGeneral = 'ROJO';
+$stmt->bind_param('i', $usuarioId);
+$stmt->execute();
+$resumen = $stmt->get_result()->fetch_assoc() ?: [];
+$stmt->close();
+
+$total            = (int)($resumen['total'] ?? 0);
+$aprobadas        = (int)($resumen['completadas_a_tiempo'] ?? 0);
+$fueraTiempo      = (int)($resumen['completadas_fuera_tiempo'] ?? 0);
+$vencidasAbiertas = (int)($resumen['vencidas_abiertas'] ?? 0);
+$vencidasTotal    = (int)($resumen['vencidas_total'] ?? 0);
+
+/*
+  Pendientes = Total - (Aprobadas) - (Vencidas total)
+  (vencidas total incluye abiertas vencidas + completadas tarde)
+*/
+$pendientes = max(0, $total - $aprobadas - $vencidasTotal);
+
+/*
+  % Rojo (tu lógica): rojas / (aprobadas + rojas)
+  rojas = vencidas total
+*/
+$rojasTotal = $vencidasTotal;
+$totalCumplimiento = $aprobadas + $rojasTotal;
+
+$porcentaje = $totalCumplimiento > 0
+  ? round(($aprobadas / $totalCumplimiento) * 100)
+  : 0;
+
+
+$semaforo = 'VERDE';
+if ($rojasTotal > 0) $semaforo = 'ROJO';
+elseif ($total === 0) $semaforo = 'WARNING';
+
 
 /* ============================================================
-   2) DETALLE JERÁRQUICO POR RESPONSABLE (GERENTE)
-   Regla semáforo:
-   - Tarea ROJA si: completada=0 y fecha_fin < CURDATE()
-   - Milestone ROJO si tiene ≥1 tarea roja
-   - Estrategia ROJO si tiene ≥1 milestone rojo
-   - Objetivo ROJO si tiene ≥1 estrategia roja
+   2) DETALLE JERÁRQUICO SIN DUPLICAR TAREAS
+   Se asigna un objetivo representativo por estrategia
 ============================================================ */
 $sqlDetalle = "
 SELECT
-  COALESCE(o.objetivo_id, 0) AS objetivo_id,
-  COALESCE(o.titulo, 'Sin objetivo') AS objetivo_titulo,
+    t.tarea_id,
+    t.titulo AS tarea,
+    t.fecha_inicio,
+    t.fecha_fin,
+    t.estatus,
+    t.completada,
 
-  e.estrategia_id,
-  e.titulo AS estrategia_titulo,
+    m.milestone_id,
+    m.titulo AS milestone,
 
-  COALESCE(m.milestone_id, 0) AS milestone_id,
-  COALESCE(m.titulo, 'Sin milestone') AS milestone_titulo,
+    e.estrategia_id,
+    e.titulo AS estrategia,
 
-  t.tarea_id,
-  t.titulo AS tarea_titulo,
-  t.fecha_inicio,
-  t.fecha_fin,
-  t.completada,
-
-  CASE
-    WHEN t.tarea_id IS NULL THEN 'SIN_TAREA'
-    WHEN t.completada = 1 THEN 'VERDE'
-    WHEN t.fecha_fin < CURDATE() THEN 'ROJO'
-    ELSE 'VERDE'
-  END AS semaforo_tarea,
-
-  CASE
-    WHEN t.tarea_id IS NOT NULL AND t.completada = 0 AND t.fecha_fin < CURDATE() THEN 1 ELSE 0
-  END AS tarea_roja
+    o.objetivo_id,
+    o.titulo AS objetivo
 
 FROM estrategias e
-LEFT JOIN objetivo_estrategia oe ON oe.estrategia_id = e.estrategia_id
-LEFT JOIN objetivos o ON o.objetivo_id = oe.objetivo_id
-LEFT JOIN milestones m ON m.estrategia_id = e.estrategia_id
-LEFT JOIN tareas t ON t.milestone_id = m.milestone_id
+JOIN milestones m ON m.estrategia_id = e.estrategia_id
+JOIN tareas t ON t.milestone_id = m.milestone_id
 
-WHERE e.empresa_id = ?
-  AND e.responsable_usuario_id = ?
+LEFT JOIN (
+    SELECT oe.estrategia_id, MIN(o.objetivo_id) AS objetivo_id, MIN(o.titulo) AS titulo
+    FROM objetivo_estrategia oe
+    JOIN objetivos o ON o.objetivo_id = oe.objetivo_id
+    GROUP BY oe.estrategia_id
+) o ON o.estrategia_id = e.estrategia_id
 
-ORDER BY o.objetivo_id, e.estrategia_id, m.milestone_id, t.fecha_fin
+WHERE e.responsable_usuario_id = ?
+ORDER BY o.titulo, e.titulo, m.titulo, t.fecha_fin
 ";
 
-$stmt2 = $conn->prepare($sqlDetalle);
-$stmt2->bind_param('ii', $empresaId, $usuarioId);
-$stmt2->execute();
-$rows = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt = $conn->prepare($sqlDetalle);
+if (!$stmt) {
+  echo json_encode(['success' => false, 'msg' => 'Error prepare detalle: ' . $conn->error], JSON_UNESCAPED_UNICODE);
+  exit;
+}
+
+$stmt->bind_param('i', $usuarioId);
+$stmt->execute();
+$rs = $stmt->get_result();
 
 /* ============================================================
-   3) ARMAR ESTRUCTURA OBJETIVO->ESTRATEGIA->MILESTONE->TAREAS
+   3) ARMAR JERARQUÍA
 ============================================================ */
-$map = []; // objetivo_id => ...
+$data = [];
+$hoy = date('Y-m-d');
 
-foreach ($rows as $r) {
-  $objId = (int)$r['objetivo_id'];
-  $estId = (int)$r['estrategia_id'];
-  $milId = (int)$r['milestone_id'];
-  $tarId = isset($r['tarea_id']) ? (int)$r['tarea_id'] : 0;
+while ($r = $rs->fetch_assoc()) {
+  $estatus = (int)($r['estatus'] ?? 0);
 
-  if (!isset($map[$objId])) {
-    $map[$objId] = [
-      'objetivo_id' => $objId,
-      'objetivo' => $r['objetivo_titulo'],
-      'semaforo' => 'VERDE',
-      'rojas' => 0,
-      'estrategias' => []
+  switch ($estatus) {
+    case 1:
+      $estatusTxt = 'Abierta';
+      break;
+    case 2:
+      $estatusTxt = 'En progreso';
+      break;
+    case 3:
+      $estatusTxt = 'En revisión';
+      break;
+    case 4:
+      $estatusTxt = 'Aprobada';
+      break;
+    case 5:
+      $estatusTxt = 'Rechazada';
+      break;
+    case 6:
+      $estatusTxt = 'Completada fuera de tiempo';
+      break;
+    default:
+      $estatusTxt = 'Sin estatus';
+  }
+
+  // Semáforo tarea: ROJO si completada tarde (6) o si no aprobada y ya venció
+  $fechaFin = $r['fecha_fin'] ?? null;
+
+  $tSem = 'VERDE';
+  if ($estatus === 6) {
+    $tSem = 'ROJO';
+  } elseif ($estatus !== 4 && $fechaFin && $fechaFin < $hoy) {
+    $tSem = 'ROJO';
+  }
+
+  // Tipo de vencida a nivel tarea (opcional para UI)
+  $tipoVencida = 'NINGUNA';
+  if ($estatus === 6) {
+    $tipoVencida = 'COMPLETADA_TARDE';
+  } elseif ($estatus !== 4 && $fechaFin && $fechaFin < $hoy) {
+    $tipoVencida = 'ABIERTA_VENCIDA';
+  }
+
+  $objId = (int)($r['objetivo_id'] ?? 0);
+  $estId = (int)($r['estrategia_id'] ?? 0);
+  $milId = (int)($r['milestone_id'] ?? 0);
+
+  if (!isset($data[$objId])) {
+    $data[$objId] = [
+      'objetivo' => $r['objetivo'] ?? 'Sin objetivo',
+      'estrategias' => [],
+      'rojas' => 0
     ];
   }
 
-  if (!isset($map[$objId]['estrategias'][$estId])) {
-    $map[$objId]['estrategias'][$estId] = [
-      'estrategia_id' => $estId,
-      'estrategia' => $r['estrategia_titulo'],
-      'semaforo' => 'VERDE',
-      'rojas' => 0,
-      'milestones' => []
+  if (!isset($data[$objId]['estrategias'][$estId])) {
+    $data[$objId]['estrategias'][$estId] = [
+      'estrategia' => $r['estrategia'] ?? 'Sin estrategia',
+      'milestones' => [],
+      'rojas' => 0
     ];
   }
 
-  if (!isset($map[$objId]['estrategias'][$estId]['milestones'][$milId])) {
-    $map[$objId]['estrategias'][$estId]['milestones'][$milId] = [
-      'milestone_id' => $milId,
-      'milestone' => $r['milestone_titulo'],
-      'semaforo' => 'VERDE',
-      'rojas' => 0,
-      'tareas' => []
+  if (!isset($data[$objId]['estrategias'][$estId]['milestones'][$milId])) {
+    $data[$objId]['estrategias'][$estId]['milestones'][$milId] = [
+      'milestone' => $r['milestone'] ?? 'Sin milestone',
+      'tareas' => [],
+      'rojas' => 0
     ];
   }
 
-  if ($tarId > 0) {
-    $map[$objId]['estrategias'][$estId]['milestones'][$milId]['tareas'][] = [
-      'tarea_id' => $tarId,
-      'tarea' => $r['tarea_titulo'],
-      'fecha_inicio' => $r['fecha_inicio'],
-      'fecha_fin' => $r['fecha_fin'],
-      'completada' => (int)$r['completada'],
-      'semaforo' => $r['semaforo_tarea'],
-      'tarea_roja' => (int)$r['tarea_roja']
-    ];
+  $data[$objId]['estrategias'][$estId]['milestones'][$milId]['tareas'][] = [
+    'tarea_id' => (int)($r['tarea_id'] ?? 0),
+    'tarea' => $r['tarea'] ?? '',
+    'fecha_inicio' => $r['fecha_inicio'] ?? null,
+    'fecha_fin' => $fechaFin,
+    'estatus' => $estatus,
+    'estatus_txt' => $estatusTxt,
+    'completada' => (int)($r['completada'] ?? 0),
+    'semaforo' => $tSem,
+    'tipo_vencida' => $tipoVencida
+  ];
+
+  if ($tSem === 'ROJO') {
+    $data[$objId]['rojas']++;
+    $data[$objId]['estrategias'][$estId]['rojas']++;
+    $data[$objId]['estrategias'][$estId]['milestones'][$milId]['rojas']++;
   }
 }
 
+$stmt->close();
+
 /* ============================================================
-   4) CALCULAR SEMÁFORO HEREDADO (ROJO si hay vencidas)
+   4) NORMALIZAR JERARQUÍA (arrays)
 ============================================================ */
 $out = [];
-foreach ($map as $obj) {
-  // convertir estrategias y milestones a arrays y calcular
-  $objRojas = 0;
-  $estrategias = [];
+foreach ($data as $o) {
+  $o['semaforo'] = ($o['rojas'] ?? 0) > 0 ? 'ROJO' : 'VERDE';
 
-  foreach ($obj['estrategias'] as $est) {
-    $estRojas = 0;
-    $milestones = [];
+  foreach ($o['estrategias'] as &$e) {
+    $e['semaforo'] = ($e['rojas'] ?? 0) > 0 ? 'ROJO' : 'VERDE';
 
-    foreach ($est['milestones'] as $mil) {
-      $milRojas = 0;
-      foreach ($mil['tareas'] as $t) {
-        $milRojas += (int)($t['tarea_roja'] ?? 0);
-      }
-      $mil['rojas'] = $milRojas;
-      $mil['semaforo'] = ($milRojas > 0) ? 'ROJO' : 'VERDE';
-
-      $estRojas += $milRojas;
-      $milestones[] = $mil;
+    foreach ($e['milestones'] as &$m) {
+      $m['semaforo'] = ($m['rojas'] ?? 0) > 0 ? 'ROJO' : 'VERDE';
     }
 
-    $est['milestones'] = $milestones;
-    $est['rojas'] = $estRojas;
-    $est['semaforo'] = ($estRojas > 0) ? 'ROJO' : 'VERDE';
-
-    $objRojas += $estRojas;
-    $estrategias[] = $est;
+    $e['milestones'] = array_values($e['milestones']);
   }
 
-  $obj['estrategias'] = $estrategias;
-  $obj['rojas'] = $objRojas;
-  $obj['semaforo'] = ($objRojas > 0) ? 'ROJO' : 'VERDE';
-
-  $out[] = $obj;
+  $o['estrategias'] = array_values($o['estrategias']);
+  $out[] = $o;
 }
 
+/* ============================================================
+   5) RESPUESTA FINAL
+============================================================ */
 echo json_encode([
   'success' => true,
   'resumen' => [
-    'usuario_id' => (int)$resumen['usuario_id'],
-    'nombre' => $resumen['nombre_completo'],
-    'rol' => $resumen['rol'],
-    'area_nombre' => $resumen['area_nombre'],
-    'total' => (int)$resumen['total_tareas'],
-    'finalizadas' => (int)$resumen['finalizadas'],
-    'pendientes' => (int)$resumen['pendientes'],
-    'vencidas' => (int)$resumen['vencidas'],
-    'porcentaje' => (int)$resumen['porcentaje'],
-    'semaforo' => $semaforoGeneral
+    'nombre' => $resumen['nombre'] ?? '',
+    'rol' => $resumen['rol'] ?? '',
+    'area_nombre' => $resumen['area_nombre'] ?? '',
+
+    'total' => $total,
+    'completadas_a_tiempo' => $aprobadas,
+    'completadas_fuera_tiempo' => $fueraTiempo,
+
+    // clave: separadas y total
+    'vencidas_abiertas' => $vencidasAbiertas,
+    'vencidas_total' => $vencidasTotal,
+
+    'pendientes' => $pendientes,
+    'porcentaje' => $porcentaje,
+    'semaforo' => $semaforo
   ],
   'data' => $out
 ], JSON_UNESCAPED_UNICODE);
-
 exit;

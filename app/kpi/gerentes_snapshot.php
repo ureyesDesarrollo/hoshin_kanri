@@ -21,7 +21,7 @@ $hasta = trim($_GET['hasta'] ?? '');
 
 if ($desde === '' || $hasta === '') {
   $today = new DateTime('today');
-  $dow = (int)$today->format('w');         // 0=Domingo..6=Sábado
+  $dow = (int)$today->format('w'); // 0=Domingo..6=Sábado
   $start = (clone $today)->modify("-{$dow} days"); // domingo
   $end   = (clone $start)->modify("+6 days");      // sábado
 
@@ -33,6 +33,26 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde) || !preg_match('/^\d{4}-\d{2}-\
   echo json_encode(['success' => false, 'message' => 'Formato de fecha inválido (YYYY-MM-DD)']);
   exit;
 }
+
+/**
+ * ✅ corte_dt:
+ * - Si se está cerrando la semana (cron sábado 23:59) => usar semana_fin 23:59:59
+ * - Si es semana en curso => usar NOW() para no marcar como vencidas las que aún no vencen
+ *
+ * Puedes forzar cierre con ?modo=cierre (ideal para cron).
+ */
+$modo = trim($_GET['modo'] ?? ''); // '' | 'cierre'
+$now = new DateTime();             // ahora
+$hoy = new DateTime('today');
+
+$hastaDate = DateTime::createFromFormat('Y-m-d', $hasta);
+if (!$hastaDate) $hastaDate = new DateTime($hasta);
+
+$isCierre = ($modo === 'cierre') || ($hoy > $hastaDate); // si ya pasó la semana, también es cierre
+
+$corteDt = $isCierre
+  ? ($hasta . ' 23:59:59')
+  : $now->format('Y-m-d H:i:s');
 
 $sql = "
 INSERT INTO kpi_responsable_semanal (
@@ -50,7 +70,6 @@ SELECT
   ? AS semana_inicio,
   ? AS semana_fin,
 
-  /* total real */
   COUNT(x.tarea_id) AS total_tareas,
 
   /* a tiempo */
@@ -62,15 +81,15 @@ SELECT
     THEN 1 ELSE 0
   END) AS cumplidas_a_tiempo,
 
-  /* vencidas abiertas */
+  /* ✅ vencidas al corte: no completadas y ya pasó su fecha_fin (fin del día) respecto a corte_dt */
   SUM(CASE
     WHEN x.tarea_id IS NOT NULL
      AND x.completada = 0
-     AND x.fecha_fin < CURDATE()
+     AND ? > CONCAT(x.fecha_fin, ' 23:59:59')
     THEN 1 ELSE 0
   END) AS vencidas_no_cumplidas,
 
-  /* completadas tarde (cuentan como vencidas) */
+  /* completadas tarde (falla) */
   SUM(CASE
     WHEN x.tarea_id IS NOT NULL
      AND x.completada = 1
@@ -88,7 +107,7 @@ SELECT
           SUM(CASE
             WHEN x.tarea_id IS NOT NULL
              AND x.completada = 0
-             AND x.fecha_fin < CURDATE()
+             AND ? > CONCAT(x.fecha_fin, ' 23:59:59')
             THEN 1 ELSE 0
           END)
           +
@@ -148,7 +167,18 @@ if (!$stmt) {
   exit;
 }
 
-$stmt->bind_param('issssi', $empresaId, $desde, $hasta, $desde, $hasta, $empresaId);
+/*
+  Params:
+  1 empresaId
+  2 desde
+  3 hasta
+  4 corteDt (vencidas)
+  5 corteDt (porcentaje)
+  6 desde (between)
+  7 hasta (between)
+  8 empresaId (where)
+*/
+$stmt->bind_param('issssssi', $empresaId, $desde, $hasta, $corteDt, $corteDt, $desde, $hasta, $empresaId);
 
 $ok = $stmt->execute();
 if (!$ok) {
@@ -159,6 +189,8 @@ if (!$ok) {
 echo json_encode([
   'success' => true,
   'message' => 'KPI semanal generado/actualizado',
-  'range' => ['desde' => $desde, 'hasta' => $hasta]
+  'range' => ['desde' => $desde, 'hasta' => $hasta],
+  'corte_dt' => $corteDt,
+  'modo' => $isCierre ? 'CIERRE' : 'EN_CURSO'
 ], JSON_UNESCAPED_UNICODE);
 exit;

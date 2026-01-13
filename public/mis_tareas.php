@@ -57,6 +57,9 @@ require_once '../app/layout/sidebar.php';
                         <option value="hoy">Vence hoy</option>
                         <option value="semana">Esta semana</option>
                         <option value="finalizadas">Finalizadas</option>
+                        <option value="revision">En revisión</option>
+                        <option value="rechazadas">Rechazadas</option>
+
                     </select>
                 </div>
 

@@ -70,12 +70,27 @@ $paginaActual = basename($_SERVER['PHP_SELF']);
             </li>
         <?php endif; ?>
 
-
         <?php if (puede('mis_tareas')): ?>
             <li class="nav-item">
                 <a href="mis_tareas.php"
                     class="nav-link <?= $paginaActual === 'mis_tareas.php' ? 'active' : '' ?>">
                     <i class="fas fa-user"></i> Mis tareas
+                </a>
+            </li>
+        <?php endif; ?>
+
+        <li class="nav-item">
+            <a href="notificaciones.php"
+                class="nav-link <?= $paginaActual === 'notificaciones.php' ? 'active' : '' ?>">
+                <i class="fas fa-bell"></i> Notificaciones
+            </a>
+        </li>
+
+        <?php if (puede('colaboradores')): ?>
+            <li class="nav-item">
+                <a href="colaboradores.php"
+                    class="nav-link <?= $paginaActual === 'colaboradores.php' ? 'active' : '' ?>">
+                    <i class="fas fa-users"></i> Colaboradores
                 </a>
             </li>
         <?php endif; ?>
