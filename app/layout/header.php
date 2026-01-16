@@ -7,6 +7,7 @@ require_once __DIR__ . '/../core/auth.php';
 auth_require();
 
 $user = auth_user();
+
 ?>
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="light">

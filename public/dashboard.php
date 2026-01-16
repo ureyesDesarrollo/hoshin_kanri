@@ -1,6 +1,13 @@
 <?php
 require_once '../app/layout/header.php';
 require_once '../app/layout/sidebar.php';
+
+$isBoss = $_SESSION['usuario']['rol'] === 'licenciado';
+
+if ($isBoss) {
+  header('Location: proyectos_lic.php');
+  exit;
+}
 ?>
 
 <main class="main-content" id="mainContent">

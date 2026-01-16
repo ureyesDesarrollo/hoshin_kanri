@@ -196,9 +196,9 @@ require_once '../app/layout/sidebar.php';
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Prioridad <span class="text-danger">*</span></label>
                         <select id="estrPrioridad" class="form-select">
-                            <option value="1">Baja</option>
-                            <option value="2" selected>Media</option>
-                            <option value="3">Alta</option>
+                            <option value="1">Puede Esperar</option>
+                            <option value="2" selected>Importante</option>
+                            <option value="3">Prioritario</option>
                         </select>
                     </div>
                 </div>

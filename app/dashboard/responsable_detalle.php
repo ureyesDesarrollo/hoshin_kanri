@@ -8,19 +8,19 @@ auth_require();
 $conn = db();
 
 $usuarioId = (int)($_GET['usuario_id'] ?? 0);
+$empresaId = (int)($_GET['empresa_id'] ?? 1); // AJUSTA a tu auth real
 
 if ($usuarioId <= 0) {
   echo json_encode(['success' => false, 'msg' => 'Usuario inválido'], JSON_UNESCAPED_UNICODE);
   exit;
 }
+if ($empresaId <= 0) {
+  echo json_encode(['success' => false, 'msg' => 'Empresa inválida (empresaId no disponible)'], JSON_UNESCAPED_UNICODE);
+  exit;
+}
 
 /* ============================================================
    1) RESUMEN GLOBAL DEL GERENTE
-   Solo tareas de estrategias donde el usuario es responsable
-   - Aprobadas (estatus=4)
-   - Completadas tarde (estatus=6)
-   - Vencidas abiertas (estatus IN 1,2,3,5 y fecha_fin < CURDATE())
-   - Vencidas total = vencidas_abiertas + completadas_tarde
 ============================================================ */
 $sqlResumen = "
 SELECT
@@ -51,6 +51,7 @@ JOIN milestones m ON m.estrategia_id = e.estrategia_id
 JOIN tareas t ON t.milestone_id = m.milestone_id
 
 WHERE u.usuario_id = ?
+GROUP BY u.usuario_id, u.nombre_completo, r.nombre, a.nombre
 ";
 
 $stmt = $conn->prepare($sqlResumen);
@@ -58,9 +59,14 @@ if (!$stmt) {
   echo json_encode(['success' => false, 'msg' => 'Error prepare resumen: ' . $conn->error], JSON_UNESCAPED_UNICODE);
   exit;
 }
-
 $stmt->bind_param('i', $usuarioId);
-$stmt->execute();
+
+if (!$stmt->execute()) {
+  echo json_encode(['success' => false, 'msg' => 'Error execute resumen: ' . $stmt->error], JSON_UNESCAPED_UNICODE);
+  $stmt->close();
+  exit;
+}
+
 $resumen = $stmt->get_result()->fetch_assoc() ?: [];
 $stmt->close();
 
@@ -70,23 +76,11 @@ $fueraTiempo      = (int)($resumen['completadas_fuera_tiempo'] ?? 0);
 $vencidasAbiertas = (int)($resumen['vencidas_abiertas'] ?? 0);
 $vencidasTotal    = (int)($resumen['vencidas_total'] ?? 0);
 
-/*
-  Pendientes = Total - (Aprobadas) - (Vencidas total)
-  (vencidas total incluye abiertas vencidas + completadas tarde)
-*/
 $pendientes = max(0, $total - $aprobadas - $vencidasTotal);
-
-/*
-  % Rojo (tu lógica): rojas / (aprobadas + rojas)
-  rojas = vencidas total
-*/
 $rojasTotal = $vencidasTotal;
+
 $totalCumplimiento = $aprobadas + $rojasTotal;
-
-$porcentaje = $totalCumplimiento > 0
-  ? round(($aprobadas / $totalCumplimiento) * 100)
-  : 0;
-
+$porcentaje = $totalCumplimiento > 0 ? round(($aprobadas / $totalCumplimiento) * 100) : 0;
 
 $semaforo = 'VERDE';
 if ($rojasTotal > 0) $semaforo = 'ROJO';
@@ -94,57 +88,71 @@ elseif ($total === 0) $semaforo = 'WARNING';
 
 
 /* ============================================================
-   2) DETALLE JERÁRQUICO SIN DUPLICAR TAREAS
-   Se asigna un objetivo representativo por estrategia
+   2) DETALLE JERÁRQUICO "REAL" (DUPLICA TAREAS POR OBJETIVO)
+   - LEFT JOIN objetivo_estrategia + objetivos
+   - LEFT JOIN milestones + tareas para no perder estrategias sin datos
 ============================================================ */
 $sqlDetalle = "
 SELECT
-    t.tarea_id,
-    t.titulo AS tarea,
-    t.fecha_inicio,
-    t.fecha_fin,
-    t.estatus,
-    t.completada,
+  COALESCE(o.objetivo_id, 0) AS objetivo_id,
+  COALESCE(o.titulo, 'Sin objetivo') AS objetivo_titulo,
 
-    m.milestone_id,
-    m.titulo AS milestone,
+  e.estrategia_id,
+  e.titulo AS estrategia_titulo,
 
-    e.estrategia_id,
-    e.titulo AS estrategia,
+  COALESCE(m.milestone_id, 0) AS milestone_id,
+  COALESCE(m.titulo, 'Sin milestone') AS milestone_titulo,
 
-    o.objetivo_id,
-    o.titulo AS objetivo
+  t.tarea_id,
+  t.titulo AS tarea_titulo,
+  t.fecha_inicio,
+  t.fecha_fin,
+  t.estatus,
+  t.completada
 
 FROM estrategias e
-JOIN milestones m ON m.estrategia_id = e.estrategia_id
-JOIN tareas t ON t.milestone_id = m.milestone_id
+LEFT JOIN objetivo_estrategia oe ON oe.estrategia_id = e.estrategia_id
+LEFT JOIN objetivos o ON o.objetivo_id = oe.objetivo_id
 
-LEFT JOIN (
-    SELECT oe.estrategia_id, MIN(o.objetivo_id) AS objetivo_id, MIN(o.titulo) AS titulo
-    FROM objetivo_estrategia oe
-    JOIN objetivos o ON o.objetivo_id = oe.objetivo_id
-    GROUP BY oe.estrategia_id
-) o ON o.estrategia_id = e.estrategia_id
+LEFT JOIN milestones m ON m.estrategia_id = e.estrategia_id
+LEFT JOIN tareas t ON t.milestone_id = m.milestone_id
 
-WHERE e.responsable_usuario_id = ?
-ORDER BY o.titulo, e.titulo, m.titulo, t.fecha_fin
+WHERE e.empresa_id = ?
+  AND e.responsable_usuario_id = ?
+
+ORDER BY o.objetivo_id, e.estrategia_id, m.milestone_id, t.fecha_fin
 ";
 
-$stmt = $conn->prepare($sqlDetalle);
-if (!$stmt) {
+$stmt2 = $conn->prepare($sqlDetalle);
+if (!$stmt2) {
   echo json_encode(['success' => false, 'msg' => 'Error prepare detalle: ' . $conn->error], JSON_UNESCAPED_UNICODE);
   exit;
 }
+$stmt2->bind_param('ii', $empresaId, $usuarioId);
 
-$stmt->bind_param('i', $usuarioId);
-$stmt->execute();
-$rs = $stmt->get_result();
+if (!$stmt2->execute()) {
+  echo json_encode(['success' => false, 'msg' => 'Error execute detalle: ' . $stmt2->error], JSON_UNESCAPED_UNICODE);
+  $stmt2->close();
+  exit;
+}
+
+$rs = $stmt2->get_result();
+if (!$rs) {
+  echo json_encode(['success' => false, 'msg' => 'Error get_result detalle: ' . $stmt2->error], JSON_UNESCAPED_UNICODE);
+  $stmt2->close();
+  exit;
+}
 
 /* ============================================================
-   3) ARMAR JERARQUÍA
+   3) ARMAR JERARQUÍA (con estatus_txt + tipo_vencida)
+   - Duplica tareas por objetivo (porque viene una fila por objetivo)
+   - Dedup opcional por si objetivo_estrategia tiene filas repetidas
 ============================================================ */
 $data = [];
 $hoy = date('Y-m-d');
+
+// (Opcional) evita duplicados EXACTOS por data sucia (misma tarea en mismo objetivo/milestone)
+$seen = []; // key => true
 
 while ($r = $rs->fetch_assoc()) {
   $estatus = (int)($r['estatus'] ?? 0);
@@ -172,9 +180,9 @@ while ($r = $rs->fetch_assoc()) {
       $estatusTxt = 'Sin estatus';
   }
 
-  // Semáforo tarea: ROJO si completada tarde (6) o si no aprobada y ya venció
   $fechaFin = $r['fecha_fin'] ?? null;
 
+  // Semáforo tarea: ROJO si completada tarde (6) o si no aprobada y ya venció
   $tSem = 'VERDE';
   if ($estatus === 6) {
     $tSem = 'ROJO';
@@ -182,7 +190,6 @@ while ($r = $rs->fetch_assoc()) {
     $tSem = 'ROJO';
   }
 
-  // Tipo de vencida a nivel tarea (opcional para UI)
   $tipoVencida = 'NINGUNA';
   if ($estatus === 6) {
     $tipoVencida = 'COMPLETADA_TARDE';
@@ -193,10 +200,12 @@ while ($r = $rs->fetch_assoc()) {
   $objId = (int)($r['objetivo_id'] ?? 0);
   $estId = (int)($r['estrategia_id'] ?? 0);
   $milId = (int)($r['milestone_id'] ?? 0);
+  $tarId = (int)($r['tarea_id'] ?? 0);
 
   if (!isset($data[$objId])) {
     $data[$objId] = [
-      'objetivo' => $r['objetivo'] ?? 'Sin objetivo',
+      'objetivo_id' => $objId,
+      'objetivo' => $r['objetivo_titulo'] ?? 'Sin objetivo',
       'estrategias' => [],
       'rojas' => 0
     ];
@@ -204,7 +213,8 @@ while ($r = $rs->fetch_assoc()) {
 
   if (!isset($data[$objId]['estrategias'][$estId])) {
     $data[$objId]['estrategias'][$estId] = [
-      'estrategia' => $r['estrategia'] ?? 'Sin estrategia',
+      'estrategia_id' => $estId,
+      'estrategia' => $r['estrategia_titulo'] ?? 'Sin estrategia',
       'milestones' => [],
       'rojas' => 0
     ];
@@ -212,35 +222,45 @@ while ($r = $rs->fetch_assoc()) {
 
   if (!isset($data[$objId]['estrategias'][$estId]['milestones'][$milId])) {
     $data[$objId]['estrategias'][$estId]['milestones'][$milId] = [
-      'milestone' => $r['milestone'] ?? 'Sin milestone',
+      'milestone_id' => $milId,
+      'milestone' => $r['milestone_titulo'] ?? 'Sin milestone',
       'tareas' => [],
       'rojas' => 0
     ];
   }
 
-  $data[$objId]['estrategias'][$estId]['milestones'][$milId]['tareas'][] = [
-    'tarea_id' => (int)($r['tarea_id'] ?? 0),
-    'tarea' => $r['tarea'] ?? '',
-    'fecha_inicio' => $r['fecha_inicio'] ?? null,
-    'fecha_fin' => $fechaFin,
-    'estatus' => $estatus,
-    'estatus_txt' => $estatusTxt,
-    'completada' => (int)($r['completada'] ?? 0),
-    'semaforo' => $tSem,
-    'tipo_vencida' => $tipoVencida
-  ];
+  // Agregar tarea solo si existe tarea_id
+  if ($tarId > 0) {
+    // Dedup opcional (solo quita duplicados exactos por data sucia)
+    $key = $objId . '|' . $estId . '|' . $milId . '|' . $tarId;
+    if (!isset($seen[$key])) {
+      $seen[$key] = true;
 
-  if ($tSem === 'ROJO') {
-    $data[$objId]['rojas']++;
-    $data[$objId]['estrategias'][$estId]['rojas']++;
-    $data[$objId]['estrategias'][$estId]['milestones'][$milId]['rojas']++;
+      $data[$objId]['estrategias'][$estId]['milestones'][$milId]['tareas'][] = [
+        'tarea_id' => $tarId,
+        'tarea' => $r['tarea_titulo'] ?? '',
+        'fecha_inicio' => $r['fecha_inicio'] ?? null,
+        'fecha_fin' => $fechaFin,
+        'estatus' => $estatus,
+        'estatus_txt' => $estatusTxt,
+        'completada' => (int)($r['completada'] ?? 0),
+        'semaforo' => $tSem,
+        'tipo_vencida' => $tipoVencida
+      ];
+
+      if ($tSem === 'ROJO') {
+        $data[$objId]['rojas']++;
+        $data[$objId]['estrategias'][$estId]['rojas']++;
+        $data[$objId]['estrategias'][$estId]['milestones'][$milId]['rojas']++;
+      }
+    }
   }
 }
 
-$stmt->close();
+$stmt2->close();
 
 /* ============================================================
-   4) NORMALIZAR JERARQUÍA (arrays)
+   4) NORMALIZAR JERARQUÍA (arrays) + semáforo heredado
 ============================================================ */
 $out = [];
 foreach ($data as $o) {
@@ -274,7 +294,6 @@ echo json_encode([
     'completadas_a_tiempo' => $aprobadas,
     'completadas_fuera_tiempo' => $fueraTiempo,
 
-    // clave: separadas y total
     'vencidas_abiertas' => $vencidasAbiertas,
     'vencidas_total' => $vencidasTotal,
 

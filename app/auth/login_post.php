@@ -67,7 +67,8 @@ if ($u && password_verify($pass, $u['password_hash'])) {
     ]);
 
     echo json_encode([
-        'success' => true
+        'success' => true,
+        'rol' => strtolower($u['rol'])
     ]);
     exit;
 }
