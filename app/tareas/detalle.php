@@ -21,6 +21,7 @@ SELECT
   t.tarea_id,
   t.titulo AS tarea,
   t.descripcion,
+  t.comentarios_responsable,
   t.fecha_inicio,
   t.fecha_fin,
   t.completada,

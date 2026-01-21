@@ -286,7 +286,6 @@ function loadDetalleResponsable(usuarioId) {
     $('#detallePorcentaje').text(r.porcentaje + '%');
 
     const p = r.porcentaje;
-    console.log(p);
     $('#detalleProgress').css('width', p + '%');
 
     const st = getHeaderStatusByResumen(r.semaforo, total, vencidasAbiertas, fueraTiempo);
@@ -582,18 +581,18 @@ function tlItem(t) {
       <div class="hk-tl-right">
         ${pillForTask(t.bucket)}
         <div class="d-flex gap-2 mt-2">
-          <button class="btn btn-sm btn-outline-success btnCompletarTarea" 
+          <button class="btn btn-sm btn-outline-success btnCompletarTarea"
                   data-id="${t.tarea_id}"
                   title="Marcar como completada">
             <i class="fas fa-check"></i>
           </button>
-          <button class="btn btn-sm btn-outline-primary btnAbrirDetalle" 
+          <button class="btn btn-sm btn-outline-primary btnAbrirDetalle"
                   data-id="${t.tarea_id}"
                   title="Ver detalles">
             <i class="fas fa-eye"></i>
           </button>
           ${diffDays < 0 ? `
-          <button class="btn btn-sm btn-outline-danger btnPosponerTarea" 
+          <button class="btn btn-sm btn-outline-danger btnPosponerTarea"
                   data-id="${t.tarea_id}"
                   title="Posponer tarea">
             <i class="fas fa-clock-rotate-left"></i>
@@ -652,13 +651,13 @@ function prioCard(t) {
             <div class="priority-badge">${t.bucket}</div>
             <div class="priority-date">${d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}</div>
         </div>
-        
+
         <div class="priority-content">
             <h6 class="priority-title">
                 <i class="fas fa-chevron-right me-2"></i>
                 ${t.tarea}
             </h6>
-            
+
             <div class="priority-metadata">
                 <div class="meta-item">
                     <i class="fas fa-bullseye"></i>
@@ -669,20 +668,20 @@ function prioCard(t) {
                     <span>${t.estrategia || 'Sin estrategia'}</span>
                 </div>
             </div>
-            
+
             <div class="progress-wrapper mt-2">
                 <div class="d-flex justify-content-between">
                     <small class="text-muted">${daysLabel}</small>
                     <small class="text-muted">${t.milestone || 'Sin hito'}</small>
                 </div>
                 <div class="progress" style="height: 4px;">
-                    <div class="progress-bar" 
+                    <div class="progress-bar"
                          style="width: ${Math.min(100, 100 - (diffDays * 10))}%; background-color: ${progressColor}">
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="priority-footer">
             <button class="btn-action btn-action--complete btnCompletarTarea" data-id="${t.tarea_id}">
                 <i class="fas fa-check"></i> Completar

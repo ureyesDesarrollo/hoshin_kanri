@@ -13,13 +13,30 @@ $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = min(50, max(5, (int)($_GET['limit'] ?? 15)));
 $offset = ($page - 1) * $limit;
 
-$f = $_GET['f'] ?? 'all';   // all|unread|revision|aprobadas|rechazadas
+$f = $_GET['f'] ?? 'all';   // all|unread|revision|aprobadas|rechazadas|dup_nombre
 $q = trim($_GET['q'] ?? '');
 
 if ($usuarioId <= 0 || $empresaId <= 0) {
-  echo json_encode(['success' => false, 'message' => 'Sesión inválida']);
+  echo json_encode(['success' => false, 'message' => 'Sesión inválida'], JSON_UNESCAPED_UNICODE);
   exit;
 }
+
+/**
+ * Importante:
+ * Como el filtro dup_nombre y el search usan ur/t, el COUNT también debe incluir los JOINs,
+ * si no, MySQL va a truenár por columnas desconocidas.
+ */
+$fromJoin = "
+FROM notificaciones n
+LEFT JOIN tareas t
+  ON n.entidad_tipo = 'tarea' AND t.tarea_id = n.entidad_id
+LEFT JOIN milestones m
+  ON m.milestone_id = t.milestone_id
+LEFT JOIN estrategias e
+  ON e.estrategia_id = m.estrategia_id
+LEFT JOIN usuarios ur
+  ON ur.usuario_id = t.responsable_usuario_id
+";
 
 $where = "WHERE n.usuario_id = ?";
 $params = [$usuarioId];
@@ -28,22 +45,32 @@ $types = "i";
 if ($f === 'unread') {
   $where .= " AND n.leida = 0";
 } elseif ($f === 'revision') {
-  $where .= " AND n.tipo = 'tarea_revision'";
+  $where .= " AND n.tipo = 'tarea_en_revision'";
 } elseif ($f === 'aprobadas') {
   $where .= " AND n.tipo = 'tarea_aprobada'";
 } elseif ($f === 'rechazadas') {
   $where .= " AND n.tipo = 'tarea_rechazada'";
+} elseif ($f === 'dup_nombre') {
+  // TODAS las filas (notificaciones) cuyo responsable (ur.nombre_completo) esté duplicado en usuarios
+  $where .= " AND ur.nombre_completo IN (
+    SELECT u.nombre_completo
+    FROM usuarios u
+    WHERE u.nombre_completo IS NOT NULL AND u.nombre_completo <> ''
+    GROUP BY u.nombre_completo
+    HAVING COUNT(*) > 1
+  )";
 }
 
 if ($q !== '') {
-  $where .= " AND (n.titulo LIKE ? OR n.cuerpo LIKE ?)";
-  $types .= "ss";
+  $where .= " AND (n.titulo LIKE ? OR n.cuerpo LIKE ? OR ur.nombre_completo LIKE ?)";
+  $types .= "sss";
+  $params[] = "%$q%";
   $params[] = "%$q%";
   $params[] = "%$q%";
 }
 
 /* COUNT */
-$sqlCount = "SELECT COUNT(*) AS total FROM notificaciones n $where";
+$sqlCount = "SELECT COUNT(DISTINCT n.notificacion_id) AS total $fromJoin $where";
 $stmt = $conn->prepare($sqlCount);
 if (!$stmt) {
   echo json_encode(['success' => false, 'message' => 'Prepare count: ' . $conn->error], JSON_UNESCAPED_UNICODE);
@@ -74,16 +101,7 @@ SELECT
   e.titulo AS estrategia_titulo,
   ur.nombre_completo AS tarea_responsable
 
-FROM notificaciones n
-LEFT JOIN tareas t
-  ON n.entidad_tipo = 'tarea' AND t.tarea_id = n.entidad_id
-LEFT JOIN milestones m
-  ON m.milestone_id = t.milestone_id
-LEFT JOIN estrategias e
-  ON e.estrategia_id = m.estrategia_id
-LEFT JOIN usuarios ur
-  ON ur.usuario_id = t.responsable_usuario_id
-
+$fromJoin
 $where
 ORDER BY n.creada_en DESC
 LIMIT $limit OFFSET $offset
@@ -102,6 +120,10 @@ $stmt->close();
 /* UNREAD COUNT (para badge global) */
 $sqlUnread = "SELECT COUNT(*) AS c FROM notificaciones WHERE usuario_id=? AND leida=0";
 $stmt = $conn->prepare($sqlUnread);
+if (!$stmt) {
+  echo json_encode(['success' => false, 'message' => 'Prepare unread: ' . $conn->error], JSON_UNESCAPED_UNICODE);
+  exit;
+}
 $stmt->bind_param("i", $usuarioId);
 $stmt->execute();
 $unread = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);

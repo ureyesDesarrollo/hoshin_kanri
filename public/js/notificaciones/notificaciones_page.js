@@ -21,7 +21,7 @@ function timeAgo(dateStr) {
 }
 
 function tagByType(tipo) {
-    if (tipo === 'tarea_revision') return `<span class="notif-tag text-warning border-warning"><i class="fas fa-clipboard-check me-1"></i>Revisión</span>`;
+    if (tipo === 'tarea_en_revision') return `<span class="notif-tag text-warning border-warning"><i class="fas fa-clipboard-check me-1"></i>Revisión</span>`;
     if (tipo === 'tarea_aprobada') return `<span class="notif-tag text-success border-success"><i class="fas fa-check-circle me-1"></i>Aprobada</span>`;
     if (tipo === 'tarea_rechazada') return `<span class="notif-tag text-danger border-danger"><i class="fas fa-times-circle me-1"></i>Rechazada</span>`;
     return `<span class="notif-tag text-secondary"><i class="fas fa-bell me-1"></i>General</span>`;
@@ -66,35 +66,43 @@ function renderNotifRow(n) {
   `;
 }
 
-function renderPagination(meta) {
+function renderPaginationNotifi(meta) {
     const ul = $('#notifPaginacion');
+
+    if (!meta || Number(meta.total_pages) <= 1) {
+        ul.empty();
+        return;
+    }
+
     ul.empty();
 
-    if (!meta || meta.total_pages <= 1) return;
-
-    const page = parseInt(meta.page || 1);
-    const totalPages = parseInt(meta.total_pages || 1);
+    const page = Number(meta.page);
+    const totalPages = Number(meta.total_pages);
 
     ul.append(`
-    <li class="page-item ${page === 1 ? 'disabled' : ''}">
-      <a class="page-link" href="#" data-page="${page - 1}"><i class="fas fa-chevron-left"></i></a>
-    </li>
-  `);
+      <li class="page-item ${page === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" data-page="${page - 1}">&laquo;</a>
+      </li>
+    `);
 
     for (let i = 1; i <= totalPages; i++) {
         ul.append(`
-      <li class="page-item ${i === page ? 'active' : ''}">
-        <a class="page-link" href="#" data-page="${i}">${i}</a>
-      </li>
-    `);
+          <li class="page-item ${i === page ? 'active' : ''}">
+            <a class="page-link border-0 ${i === page ? 'bg-primary text-white' : ''}"
+               href="#" data-page="${i}">
+                ${i}
+            </a>
+        </li>
+        `);
     }
 
     ul.append(`
-    <li class="page-item ${page === totalPages ? 'disabled' : ''}">
-      <a class="page-link" href="#" data-page="${page + 1}"><i class="fas fa-chevron-right"></i></a>
-    </li>
-  `);
+      <li class="page-item ${page === totalPages ? 'disabled' : ''}">
+        <a class="page-link" href="#" data-page="${page + 1}">&raquo;</a>
+      </li>
+    `);
 }
+
 
 function loadNotificaciones(page = 1) {
     notifPage = page;
@@ -125,12 +133,11 @@ function loadNotificaciones(page = 1) {
 
         if (!items.length) {
             $('#notifEstadoVacio').removeClass('d-none');
-            $('#notifPaginacion').empty();
             return;
         }
 
         $('#notifListFull').html(items.map(renderNotifRow).join(''));
-        renderPagination(meta);
+        renderPaginationNotifi(meta);
 
     }, 'json').fail(function () {
         $('#notifEstadoCargando').addClass('d-none');

@@ -1,4 +1,4 @@
-/* 
+/*
 1 = Abierta
 2 = En progreso
 3 = En revisión
@@ -16,17 +16,19 @@ function escapeHtml(text) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  // Forzar fecha local sin UTC
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
 
-  return date.toLocaleDateString('es-ES', {
+  const [y, m, d] = dateStr.split('-').map(Number);
+
+  const date = new Date(Date.UTC(y, m - 1, d));
+
+  return date.toLocaleDateString('es-MX', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
 }
+
 
 function badgeSemaforo(row) {
   const estatus = parseInt(row.estatus || 1);
@@ -50,6 +52,10 @@ function badgeSemaforo(row) {
   return `<span class="hk-badge hk-badge-success"><i class="fas fa-check-circle"></i> En tiempo</span>`;
 }
 
+function normalizarFecha(fecha) {
+  return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+}
+
 function renderCardTarea(t) {
   const estatus = parseInt(t.estatus || 1);
   const isApproved = estatus === 4 || parseInt(t.completada || 0) === 1;
@@ -57,8 +63,8 @@ function renderCardTarea(t) {
   const isRejected = estatus === 5;
   const canSendReview = !isApproved && (estatus === 1 || estatus === 2 || estatus === 5);
 
-  const fechaFin = new Date(t.fecha_fin);
-  const hoy = new Date();
+  const fechaFin = normalizarFecha(new Date(t.fecha_fin));
+  const hoy = normalizarFecha(new Date());
   const diasRestantes = Math.ceil((fechaFin - hoy) / (1000 * 60 * 60 * 24));
 
   // No marcar urgente/vencida si ya está en revisión o aprobada
@@ -73,7 +79,7 @@ function renderCardTarea(t) {
       ${isRejected ? 'task-card--rejected' : ''}
       ${isUrgent ? 'task-card--urgent' : ''}
       ${isOverdue ? 'task-card--overdue' : ''}">
-      
+
       <!-- Cabecera con estado y acciones -->
       <div class="task-card__header">
         <div class="task-card__status-indicator ${isApproved ? 'task-card__status-indicator--completed' : ''}">
@@ -83,14 +89,14 @@ function renderCardTarea(t) {
           ${badgeSemaforo(t)}
         </div>
       </div>
-      
+
       <!-- Contenido principal -->
       <div class="task-card__content">
         <h3 class="task-card__title">
           <i class="fas fa-tasks me-2"></i>
           ${escapeHtml(t.tarea)}
         </h3>
-        
+
         <div class="task-card__details">
           <div class="task-detail">
             <div class="task-detail__icon">
@@ -101,7 +107,7 @@ function renderCardTarea(t) {
               <span class="task-detail__value">${escapeHtml(t.objetivo)}</span>
             </div>
           </div>
-          
+
           <div class="task-detail">
             <div class="task-detail__icon">
               <i class="fas fa-chess-knight"></i>
@@ -111,7 +117,7 @@ function renderCardTarea(t) {
               <span class="task-detail__value">${escapeHtml(t.estrategia)}</span>
             </div>
           </div>
-          
+
           <div class="task-detail">
             <div class="task-detail__icon">
               <i class="fas fa-flag-checkered"></i>
@@ -123,7 +129,7 @@ function renderCardTarea(t) {
           </div>
         </div>
       </div>
-      
+
       <!-- Pie con fecha y acciones -->
       <div class="task-card__footer">
         <div class="task-card__deadline">
@@ -145,13 +151,13 @@ function renderCardTarea(t) {
             </div>
           </div>
         </div>
-        
+
         <div class="task-card__actions">
           <button class="btn-action btn-action--view btnVerTarea" data-id="${t.tarea_id}" aria-label="Ver detalles">
             <i class="fas fa-eye"></i>
             <span class="btn-action__label">Detalles</span>
           </button>
-          
+
           ${isApproved ? `
             <div class="task-completed-badge">
               <i class="fas fa-check-circle text-success me-1"></i>

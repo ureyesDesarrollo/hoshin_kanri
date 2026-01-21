@@ -8,6 +8,8 @@ if ($isBoss) {
   header('Location: proyectos_lic.php');
   exit;
 }
+
+$isGerenteOrDirector = in_array($_SESSION['usuario']['rol'], ['gerente', 'director'], true);
 ?>
 
 <main class="main-content" id="mainContent">
@@ -27,7 +29,7 @@ if ($isBoss) {
 
   <div class="row mb-4 fade-in-up" style="animation-delay: 0.2s;">
 
-    <?php if (puede('objetivos')): ?>
+    <?php if ($isGerenteOrDirector && puede('objetivos')): ?>
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="stats-card">
           <div class="stats-icon objectives">
@@ -39,7 +41,7 @@ if ($isBoss) {
       </div>
     <?php endif; ?>
 
-    <?php if (puede('estrategias')): ?>
+    <?php if ($isGerenteOrDirector && puede('estrategias')): ?>
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="stats-card">
           <div class="stats-icon strategies">
@@ -51,7 +53,7 @@ if ($isBoss) {
       </div>
     <?php endif; ?>
 
-    <?php if (puede('milestones')): ?>
+    <?php if ($isGerenteOrDirector && puede('milestones')): ?>
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="stats-card">
           <div class="stats-icon milestones">
@@ -63,7 +65,7 @@ if ($isBoss) {
       </div>
     <?php endif; ?>
 
-    <?php if (puede('tareas')): ?>
+    <?php if ($isGerenteOrDirector && puede('tareas')): ?>
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="stats-card">
           <div class="stats-icon tasks">
