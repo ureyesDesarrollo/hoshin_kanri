@@ -543,7 +543,7 @@ $body .= "</div>
 </html>";
 
 $mail = new MailSender();
-$ok = $mail->sendMail($subject, $body, ['desarrollo@progel.com.mx']);
+$ok = $mail->sendMail($subject, $body, ['fjmuro@progel.com.mx']);
 
 echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
 exit;

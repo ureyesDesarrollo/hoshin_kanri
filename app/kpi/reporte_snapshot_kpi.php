@@ -54,10 +54,12 @@ $sqlLast = "
 SELECT
   ks.semana_inicio,
   ks.semana_fin,
-  MAX(ks.generado_en) AS generado_en
+  ks.generado_en
 FROM kpi_responsable_semanal ks
 WHERE ks.empresa_id = ?
   AND ks.semana_inicio <> '0000-00-00'
+ORDER BY ks.generado_en DESC
+LIMIT 1 OFFSET 1
 ";
 $stmt = $conn->prepare($sqlLast);
 if (!$stmt) {
