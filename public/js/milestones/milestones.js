@@ -161,6 +161,7 @@ function openEditMilestone(data) {
   $("#milestoneTitulo").val(data.titulo);
   $("#milestoneDescripcion").val(data.descripcion);
   $("#milestoneResponsable").val(data.responsable_usuario_id);
+  $("#milestonePrioridad").val(data.prioridad);
   initResponsablesTomSelect("#milestoneResponsable", "#modalMilestone");
   loadResponsables("#milestoneResponsable", data.responsable_usuario_id);
 
@@ -294,6 +295,7 @@ $(document).ready(function () {
     const responsable_id = $("#milestoneResponsable").val();
     const descripcion = $("#milestoneDescripcion").val();
     const milestone_id = $("#milestoneId").val();
+    const prioridad = $("#milestonePrioridad").val();
 
     if (milestone_id) {
       $.ajax({
@@ -304,6 +306,7 @@ $(document).ready(function () {
           descripcion,
           responsable_id,
           estrategia_id,
+          prioridad,
           milestone_id,
         },
         success: function (resp) {
@@ -333,7 +336,7 @@ $(document).ready(function () {
       $.ajax({
         type: "POST",
         url: "/hoshin_kanri/app/milestone/alta.php",
-        data: { titulo, descripcion, responsable_id, estrategia_id },
+        data: { titulo, descripcion, responsable_id, estrategia_id, prioridad },
         success: function (resp) {
           if (resp.success) {
             swal.fire({

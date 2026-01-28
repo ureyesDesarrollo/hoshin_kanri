@@ -746,19 +746,21 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
   }
 
   function formatDetalleDate(dateStr) {
+
     if (!dateStr) return '—';
 
-    // Forzar fecha local sin UTC
     const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
 
-    return date.toLocaleDateString('es-ES', {
+    const date = new Date(Date.UTC(y, m - 1, d));
+
+    return date.toLocaleDateString('es-MX', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   }
+
 
 
   function calculateDetalleDaysRemaining(endDate) {
@@ -893,23 +895,6 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'fa-file-archive';
     if (['mp4', 'mp3'].includes(ext)) return 'fa-file-video';
     return 'fa-file-alt';
-  }
-
-  function formatDetalleDate(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr.replace(' ', 'T'));
-    const now = new Date();
-    const diffMs = now - date;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Hoy';
-    if (diffDays === 1) return 'Ayer';
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short'
-    });
   }
 
   function loadEvidencias() {

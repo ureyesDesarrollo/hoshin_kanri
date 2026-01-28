@@ -1,6 +1,8 @@
 let filtroTituloTarea = "";
 let filtroResponsableTarea = "";
 let searchTimerTareas = null;
+let currentPageTareas = 1;
+let currentPeriodoId = 0;
 
 function loadTareasStats(periodoId) {
   $.get(
@@ -127,7 +129,7 @@ function loadEstrategiaModal(selectedId = 0) {
 }
 
 function loadTareas(page = 1) {
-  currentPage = page;
+  currentPageTareas = page;
   $("#loadingTareasRow").removeClass("d-none");
   $("#emptyTareasRow").addClass("d-none");
 
@@ -238,8 +240,9 @@ $(document).on("input", "#txtBuscarEstrategia", function () {
 });
 
 $(document).ready(function () {
-  const periodoId = $("#periodoId").val();
-  loadTareasStats(periodoId);
+  currentPeriodoId = Number($("#periodoId").val() || 0);
+  loadTareasStats(currentPeriodoId);
+
   loadTareas();
 
   $("#buscarTituloTarea").on("input", function () {
@@ -275,7 +278,11 @@ $(document).ready(function () {
 
   $("#btnNuevoTarea, #btnNuevoTareaTabla").on("click", function () {
     modalTarea.show();
+    $("#tareaFechaInicio").prop("readonly", false);
+    $("#tareaFechaFin").prop("readonly", false);
+
     loadResponsables("#tareaResponsable", 0);
+
     initResponsablesTomSelect("#tareaResponsable", "#modalTarea");
 
     const hoy = new Date();
@@ -285,7 +292,7 @@ $(document).ready(function () {
 
     const fechaInicio = `${yyyy}-${mm}-${dd}`;
 
-    $("#tareaFechaInicio").val(fechaInicio); // ✅ CORRECTO
+    $("#tareaFechaInicio").val(fechaInicio);
 
     loadEstrategiaModal();
   });
@@ -311,7 +318,6 @@ $(document).ready(function () {
         $("#tareaFechaFin").val(t.fecha_fin);
         $("#modalTitulo").text("Actualizar Tarea");
         loadEstrategiaModal(t.estrategia_id);
-        onEstrategiaChange(t.estrategia_id);
         loadMilestonesModal(t.milestone_id);
         initResponsablesTomSelect("#tareaResponsable", "#modalTarea");
         loadResponsables("#tareaResponsable", t.responsable_usuario_id);
@@ -351,7 +357,7 @@ $(document).ready(function () {
             });
             modalTarea.hide();
             limpiarCamposTarea();
-            loadTareasStats();
+            loadTareasStats(currentPeriodoId);
             loadTareas(currentPage);
           } else {
             swal.fire({
@@ -386,7 +392,7 @@ $(document).ready(function () {
             });
             modalTarea.hide();
             limpiarCamposTarea();
-            loadTareasStats();
+            loadTareasStats(currentPeriodoId);
             loadTareas(currentPage);
           } else {
             swal.fire({

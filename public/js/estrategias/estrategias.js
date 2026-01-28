@@ -153,7 +153,7 @@ $(document).ready(function () {
   });
 
   // Limpiar
-  $("#btnLimpiarBusquedaTEstrategia").on("click", function () {
+  $("#btnLimpiarBusquedaEstrategia").on("click", function () {
     filtroTituloEstr = "";
     filtroResponsableEstr = "";
     $("#buscarTituloEstrategia").val("");

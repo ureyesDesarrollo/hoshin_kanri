@@ -232,6 +232,19 @@ require_once '../app/layout/sidebar.php';
           </select>
         </div>
 
+        <!-- PRIORIDAD -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            Prioridad <span class="text-danger">*</span>
+          </label>
+          <select id="milestonePrioridad"
+            class="form-select">
+            <option value="1">Puede esperar</option>
+            <option value="2" selected>Importante</option>
+            <option value="3">Prioritario</option>
+          </select>
+        </div>
+
         <!-- DESCRIPCIÓN -->
         <div class="mb-3">
           <label class="form-label fw-semibold">

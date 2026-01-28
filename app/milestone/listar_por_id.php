@@ -11,11 +11,11 @@ $empresaId   = (int)$_SESSION['usuario']['empresa_id'];
 $milestoneId = (int)($_GET['id'] ?? 0);
 
 if ($milestoneId <= 0) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'ID de milestone inválido'
-    ]);
-    exit;
+  echo json_encode([
+    'success' => false,
+    'message' => 'ID de milestone inválido'
+  ]);
+  exit;
 }
 
 $sql = "
@@ -26,6 +26,7 @@ SELECT
     m.descripcion,
     m.responsable_usuario_id,
     m.estatus,
+    m.prioridad,
     m.creado_en
 FROM milestones m
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
@@ -42,15 +43,15 @@ $stmt->execute();
 $data = $stmt->get_result()->fetch_assoc();
 
 if (!$data) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Milestone no encontrado'
-    ]);
-    exit;
+  echo json_encode([
+    'success' => false,
+    'message' => 'Milestone no encontrado'
+  ]);
+  exit;
 }
 
 echo json_encode([
-    'success' => true,
-    'data' => $data
+  'success' => true,
+  'data' => $data
 ]);
 exit;

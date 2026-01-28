@@ -98,7 +98,7 @@ require_once '../app/layout/sidebar.php';
               <input type="text" id="buscarResponsableEstrategia" class="form-control" placeholder="Buscar por responsable...">
             </div>
             <div class="col-md-2">
-              <button class="btn btn-primary w-100" id="btnLimpiarBusquedaOEstrategia">Limpiar</button>
+              <button class="btn btn-primary w-100" id="btnLimpiarBusquedaEstrategia">Limpiar</button>
             </div>
           </div>
         </div>

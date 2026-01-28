@@ -13,13 +13,13 @@ $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = min(24, max(6, (int)($_GET['limit'] ?? 12)));
 $offset = ($page - 1) * $limit;
 
-$filtro = $_GET['f'] ?? 'all';       // all|pendientes|vencidas|hoy|semana|finalizadas
+$filtro = $_GET['f'] ?? 'pendientes';       // all|pendientes|vencidas|hoy|semana|finalizadas
 $q = trim($_GET['q'] ?? '');
 $orden = $_GET['o'] ?? 'fecha_fin_asc';
 
 if ($empresaId <= 0 || $usuarioId <= 0) {
-    echo json_encode(['success' => false, 'message' => 'Sesión inválida']);
-    exit;
+  echo json_encode(['success' => false, 'message' => 'Sesión inválida']);
+  exit;
 }
 
 /* WHERE base + seguridad empresa */
@@ -29,30 +29,30 @@ $types = "ii";
 
 /* Filtros */
 if ($filtro === 'pendientes') {
-    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin >= CURDATE()";
+  $where .= " AND t.estatus IN (1,2) AND t.fecha_fin >= CURDATE()";
 } elseif ($filtro === 'vencidas') {
-    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin < CURDATE()";
+  $where .= " AND t.estatus IN (1,2) AND t.fecha_fin < CURDATE()";
 } elseif ($filtro === 'hoy') {
-    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin = CURDATE()";
+  $where .= " AND t.estatus IN (1,2) AND t.fecha_fin = CURDATE()";
 } elseif ($filtro === 'semana') {
-    $where .= " AND t.estatus IN (1,2) AND t.fecha_fin BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
+  $where .= " AND t.estatus IN (1,2) AND t.fecha_fin BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
 } elseif ($filtro === 'finalizadas') {
-    // incluye legacy completada=1 aunque estatus no sea 4
-    $where .= " AND (t.estatus = 4 OR t.completada = 1)";
+  // incluye legacy completada=1 aunque estatus no sea 4
+  $where .= " AND (t.estatus = 4 OR t.completada = 1)";
 } elseif ($filtro === 'revision') {
-    $where .= " AND t.estatus = 3";
+  $where .= " AND t.estatus = 3";
 } elseif ($filtro === 'rechazadas') {
-    $where .= " AND t.estatus = 5";
+  $where .= " AND t.estatus = 5";
 } else {
-    // all: no agregar nada extra
+  // all: no agregar nada extra
 }
 
 
 /* Búsqueda */
 if ($q !== '') {
-    $where .= " AND t.titulo LIKE ?";
-    $types .= "s";
-    $params[] = "%" . $q . "%";
+  $where .= " AND t.titulo LIKE ?";
+  $types .= "s";
+  $params[] = "%" . $q . "%";
 }
 
 /* ORDER BY */
@@ -85,7 +85,7 @@ SELECT
   t.completada,
   t.completada_en,
   t.estatus,
-
+  t.prioridad,
   m.milestone_id,
   m.titulo AS milestone,
   m.responsable_usuario_id,
@@ -151,19 +151,19 @@ $stmt->execute();
 $kpi = $stmt->get_result()->fetch_assoc() ?: ['total' => 0, 'finalizadas' => 0, 'pendientes' => 0, 'vencidas' => 0];
 
 echo json_encode([
-    'success' => true,
-    'data' => $data,
-    'kpi' => [
-        'total' => (int)$kpi['total'],
-        'finalizadas' => (int)$kpi['finalizadas'],
-        'pendientes' => (int)$kpi['pendientes'],
-        'vencidas' => (int)$kpi['vencidas'],
-    ],
-    'pagination' => [
-        'page' => $page,
-        'limit' => $limit,
-        'total' => $total,
-        'total_pages' => max(1, $totalPages),
-    ],
+  'success' => true,
+  'data' => $data,
+  'kpi' => [
+    'total' => (int)$kpi['total'],
+    'finalizadas' => (int)$kpi['finalizadas'],
+    'pendientes' => (int)$kpi['pendientes'],
+    'vencidas' => (int)$kpi['vencidas'],
+  ],
+  'pagination' => [
+    'page' => $page,
+    'limit' => $limit,
+    'total' => $total,
+    'total_pages' => max(1, $totalPages),
+  ],
 ], JSON_UNESCAPED_UNICODE);
 exit;
