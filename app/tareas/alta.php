@@ -19,15 +19,36 @@ $empresaId = (int)$_SESSION['usuario']['empresa_id'];
 $usuarioId = (int)$_SESSION['usuario']['usuario_id'];
 
 if (
-    $milestoneId <= 0 ||
-    $titulo === '' ||
-    $responsable <= 0 ||
-    !$fechaInicio ||
-    !$fechaFin
+  $milestoneId <= 0 ||
+  $titulo === '' ||
+  $responsable <= 0 ||
+  !$fechaInicio ||
+  !$fechaFin
 ) {
-    echo json_encode(['success'=>false,'message'=>'Datos inválidos']);
-    exit;
+  echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
+  exit;
 }
+
+
+$sqlMilestone = "SELECT milestone_id, estatus FROM milestones WHERE milestone_id = ?;";
+$stmtMilestone = $conn->prepare($sqlMilestone);
+$stmtMilestone->bind_param('i', $milestoneId);
+$stmtMilestone->execute();
+$resultMilestone = $stmtMilestone->get_result();
+if ($resultMilestone->num_rows === 0) {
+  echo json_encode(['success' => false, 'message' => 'Milestone inválido']);
+  exit;
+}
+$stmtMilestone->close();
+
+if ($resultMilestone->fetch_assoc()['estatus'] == 2) {
+  $stmtMilestone = $conn->prepare("UPDATE milestones SET estatus = 1 WHERE milestone_id = ?");
+  $stmtMilestone->bind_param('i', $milestoneId);
+  $stmtMilestone->execute();
+  $stmtMilestone->close();
+}
+
+// 2) Insertar tarea
 
 $stmt = $conn->prepare("
 INSERT INTO tareas (
@@ -42,14 +63,14 @@ INSERT INTO tareas (
 ");
 
 $stmt->bind_param(
-    'ississi',
-    $milestoneId,
-    $titulo,
-    $descripcion,
-    $responsable,
-    $fechaInicio,
-    $fechaFin,
-    $usuarioId
+  'ississi',
+  $milestoneId,
+  $titulo,
+  $descripcion,
+  $responsable,
+  $fechaInicio,
+  $fechaFin,
+  $usuarioId
 );
 
 $stmt->execute();
@@ -57,13 +78,13 @@ $stmt->execute();
 $tareaId = $conn->insert_id;
 
 auditar(
-    $conn,
-    $empresaId,
-    'tarea',
-    $tareaId,
-    'CREAR',
-    $usuarioId
+  $conn,
+  $empresaId,
+  'tarea',
+  $tareaId,
+  'CREAR',
+  $usuarioId
 );
 
-echo json_encode(['success'=>true]);
+echo json_encode(['success' => true]);
 exit;

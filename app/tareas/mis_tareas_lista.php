@@ -102,8 +102,8 @@ SELECT
   WHEN t.estatus = 4 OR t.completada = 1 THEN 'FINALIZADA'
   WHEN t.estatus = 3 THEN 'REVISION'
   WHEN t.estatus = 5 THEN 'RECHAZADA'
-  WHEN t.fecha_fin < CURDATE() THEN 'ROJO'
-  WHEN t.fecha_fin = CURDATE() THEN 'HOY'
+  WHEN DATE(t.fecha_fin) < CURDATE() THEN 'ROJO'
+  WHEN DATE(t.fecha_fin) = CURDATE() THEN 'HOY'
   ELSE 'VERDE'
 END AS semaforo
 

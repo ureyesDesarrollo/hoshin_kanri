@@ -37,7 +37,8 @@ try {
       t.responsable_usuario_id AS tarea_responsable,
       t.estatus,
       t.completada,
-      t.fecha_fin
+      t.fecha_fin,
+      t.milestone_id
     FROM tarea_aprobaciones ta
     JOIN tareas t ON t.tarea_id = ta.tarea_id
     JOIN milestones m ON m.milestone_id = t.milestone_id
@@ -67,6 +68,7 @@ try {
 
   $aprobacionId = (int)$row['aprobacion_id'];
   $tareaRespId  = (int)$row['tarea_responsable'];
+  $milestoneId  = (int)$row['milestone_id'];
 
   // Si ya está aprobada, no repetir
   $estatus = (int)$row['estatus'];
@@ -293,8 +295,44 @@ try {
    */
   auditar($conn, $empresaId, 'tarea', $tareaId, 'APROBAR', $usuarioId);
 
-  $conn->commit();
+  /**
+   * 7) Revisar si todas las tareas del milestone estan aprobadas
+   * si es asi, marcar milestone como completado
+   */
 
+  $sqlCheckMilestone = "SELECT
+    COUNT(t.tarea_id) AS total_tareas,
+    SUM(CASE WHEN t.completada = 1 THEN 1 ELSE 0 END) AS total_aprobadas
+FROM tareas t
+INNER JOIN milestones m ON m.milestone_id = t.milestone_id
+WHERE m.milestone_id = ?";
+
+  $stmtCheckMilestone = $conn->prepare($sqlCheckMilestone);
+  if (!$stmtCheckMilestone) throw new Exception("Error prepare check milestone: " . $conn->error);
+
+  $stmtCheckMilestone->bind_param('i', $milestoneId);
+  if (!$stmtCheckMilestone->execute()) {
+    $stmtCheckMilestone->close();
+    throw new Exception("Error execute check milestone: " . $stmtCheckMilestone->error);
+  }
+
+  $resultCheckMilestone = $stmtCheckMilestone->get_result();
+  $row = $resultCheckMilestone->fetch_assoc();
+
+  if ($row['total_tareas'] > 0 && $row['total_aprobadas'] == $row['total_tareas']) {
+    // Marcar milestone como completado
+    $sqlUpdateMilestone = "UPDATE milestones SET estatus = 2 WHERE milestone_id = ?";
+    $stmtUpdateMilestone = $conn->prepare($sqlUpdateMilestone);
+    if (!$stmtUpdateMilestone) throw new Exception("Error prepare update milestone: " . $conn->error);
+
+    $stmtUpdateMilestone->bind_param('i', $milestoneId);
+    if (!$stmtUpdateMilestone->execute()) {
+      throw new Exception("Error execute update milestone: " . $stmtUpdateMilestone->error);
+    }
+    $stmtUpdateMilestone->close();
+  }
+
+  $conn->commit();
 
   // Enviar correo al responsable
   $emailSender = new MailSender();

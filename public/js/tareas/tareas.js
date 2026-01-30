@@ -174,7 +174,7 @@ function loadTareas(page = 1) {
                         </div>
                     </td>
                      <td>${badgeCompletada(e.completada)}</td>
-                        <td>${formatFecha(e.creado_en)}</td>
+                        <td>${formatFecha(e.fecha_fin)}</td>
                         <td class="text-end pe-4">
                             <button class="btn btn-sm btn-outline-primary btnEditarTarea" data-id="${e.tarea_id}">
                                 <i class="fas fa-edit"></i>

@@ -751,7 +751,7 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
 
     const [y, m, d] = dateStr.split('-').map(Number);
 
-    const date = new Date(Date.UTC(y, m - 1, d));
+    const date = new Date(y, m - 1, d);
 
     return date.toLocaleDateString('es-MX', {
       weekday: 'long',

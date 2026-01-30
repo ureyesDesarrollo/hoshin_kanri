@@ -6,7 +6,7 @@
 5 = Rechazada
 6 = Completada fuera de tiempo
 */
-let currentPageTareas = 1;
+let currentPageMisTareas = 1;
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -19,7 +19,7 @@ function formatDate(dateStr) {
 
   const [y, m, d] = dateStr.split("-").map(Number);
 
-  const date = new Date(Date.UTC(y, m - 1, d));
+  const date = new Date(y, m - 1, d); // ← SIN UTC
 
   return date.toLocaleDateString("es-MX", {
     weekday: "long",
@@ -27,6 +27,11 @@ function formatDate(dateStr) {
     month: "long",
     day: "numeric",
   });
+}
+
+function parseFechaLocal(fechaStr) {
+  const [y, m, d] = fechaStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 function badgeSemaforo(row) {
@@ -76,9 +81,9 @@ function renderCardTarea(t) {
   const canSendReview =
     !isApproved && (estatus === 1 || estatus === 2 || estatus === 5);
 
-  const fechaFin = normalizarFecha(new Date(t.fecha_fin));
+  const fechaFin = normalizarFecha(new parseFechaLocal(t.fecha_fin));
   const hoy = normalizarFecha(new Date());
-  const diasRestantes = Math.ceil((fechaFin - hoy) / (1000 * 60 * 60 * 24));
+  const diasRestantes = Math.round((fechaFin - hoy) / (1000 * 60 * 60 * 24));
 
   // No marcar urgente/vencida si ya está en revisión o aprobada
   const isUrgent = diasRestantes <= 2 && !isApproved && !isRevision;
@@ -254,7 +259,7 @@ function renderPaginationMisTareas(p) {
 }
 
 function loadMisTareas(page = 1) {
-  currentPageTareas = page;
+  currentPageMisTareas = page;
 
   const $container = $("#contenedorTareas");
   $container.addClass("fade-out");
@@ -347,12 +352,12 @@ function completarTarea(tareaId) {
       text: "La tarea fue enviada a revisión.",
     });
 
-    loadMisTareas(currentPageTareas);
+    loadMisTareas(currentPageMisTareas);
   });
 }
 
 $(document).on("click", "#btnRefrescar", function () {
-  loadMisTareas(currentPageTareas);
+  loadMisTareas(currentPageMisTareas);
 });
 
 let searchTimer = null;
