@@ -212,8 +212,7 @@ try {
   // Cambia 'CERRAR' por algo más correcto, ej: 'ENVIAR_REVISION'
   auditar($conn, $empresaId, 'tarea', $tareaId, 'ENVIAR_REVISION', $usuarioId);
 
-  $sqlMail = "
-SELECT
+  $sqlMail = "SELECT
   t.tarea_id,
   t.titulo AS tarea_titulo,
   t.fecha_fin,
@@ -223,6 +222,8 @@ SELECT
   e.titulo AS estrategia_titulo,
 
   sol.nombre_completo AS solicitante_nombre,
+  sol.correo AS solicitante_correo,          -- <-- NUEVO
+
   apr.usuario_id AS usuario_id,
   apr.nombre_completo AS aprobador_nombre,
   apr.correo AS aprobador_correo
@@ -236,6 +237,7 @@ JOIN usuarios apr ON apr.usuario_id = ?
 WHERE t.tarea_id = ?
 LIMIT 1
 ";
+
 
   $stmt = $conn->prepare($sqlMail);
   if (!$stmt) throw new Exception("Error prepare mail data: " . $conn->error);
@@ -271,82 +273,111 @@ LIMIT 1
     $d = $mailPayload['data'];
 
     $baseUrl = 'http://192.168.1.105';
-
     $link = $baseUrl . '/hoshin_kanri/public/detalle.php?tarea_id=' . urlencode((string)$d['tarea_id']);
 
-    $subject = "Tarea para revisión: " . ($d['tarea_titulo'] ?? ('#' . $tareaId));
+    /* =========================
+     1) Correo al APROBADOR
+  ========================= */
+    $subjectAprobador = "Tarea para revisión: " . ($d['tarea_titulo'] ?? ('#' . $tareaId));
 
-    $html = "
+    $htmlAprobador = "
 <table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f6f8;padding:20px'>
-  <tr>
-    <td align='center'>
-      <table cellpadding='0' cellspacing='0' width='100%' style='max-width:720px;background:#ffffff;border-radius:8px;padding:20px;font-family:Arial,sans-serif;color:#111'>
+  <tr><td align='center'>
+    <table cellpadding='0' cellspacing='0' width='100%' style='max-width:720px;background:#ffffff;border-radius:8px;padding:20px;font-family:Arial,sans-serif;color:#111'>
+      <tr><td>
+        <p>Hola <b>" . htmlspecialchars($d['aprobador_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</b>,</p>
 
-        <tr>
-          <td>
-            <p>Hola <b>" . htmlspecialchars($d['aprobador_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</b>,</p>
+        <p>Has recibido una tarea a revisión (nivel: <b>" . htmlspecialchars($mailPayload['nivel'], ENT_QUOTES, 'UTF-8') . "</b>).</p>
 
-            <p>
-              Has recibido una tarea a revisión
-              (nivel: <b>" . htmlspecialchars($mailPayload['nivel'], ENT_QUOTES, 'UTF-8') . "</b>).
-            </p>
+        <p><b>Comentarios de la tarea:</b></p>
+        <div style='font-style:italic;color:#555;border-left:4px solid #ddd;padding-left:10px;margin-bottom:16px'>
+          " . nl2br(htmlspecialchars($d['comentarios_responsable'] ?? '', ENT_QUOTES, 'UTF-8')) . "
+        </div>
 
-            <p><b>Comentarios de la tarea:</b></p>
+        <table cellpadding='8' cellspacing='0' width='100%' style='border-collapse:collapse;border:1px solid #ddd'>
+          <tr><td style='background:#f6f6f6;width:180px'><b>Tarea</b></td>
+              <td>" . htmlspecialchars($d['tarea_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . " (ID: " . (int)$d['tarea_id'] . ")</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Milestone</b></td><td>" . htmlspecialchars($d['milestone_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Estrategia</b></td><td>" . htmlspecialchars($d['estrategia_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Fecha límite</b></td><td>" . htmlspecialchars($d['fecha_fin'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Solicitante</b></td><td>" . htmlspecialchars($d['solicitante_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+        </table>
 
-            <div style='font-style:italic;color:#555;border-left:4px solid #ddd;padding-left:10px;margin-bottom:16px'>
-              " . nl2br(htmlspecialchars($d['comentarios_responsable'] ?? '', ENT_QUOTES, 'UTF-8')) . "
-            </div>
+        <table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:20px'>
+          <tr>
+            <td align='center' bgcolor='#006ec7' style='border-radius:8px'>
+              <a href='" . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . "' target='_blank'
+                 style='display:inline-block;padding:12px 18px;font-family:Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;font-weight:bold'>
+                Revisar tarea
+              </a>
+            </td>
+          </tr>
+        </table>
 
-            <table cellpadding='8' cellspacing='0' width='100%' style='border-collapse:collapse;border:1px solid #ddd'>
-              <tr>
-                <td style='background:#f6f6f6;width:180px'><b>Tarea</b></td>
-                <td>" . htmlspecialchars($d['tarea_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . " (ID: " . (int)$d['tarea_id'] . ")</td>
-              </tr>
-              <tr>
-                <td style='background:#f6f6f6'><b>Milestone</b></td>
-                <td>" . htmlspecialchars($d['milestone_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>
-              </tr>
-              <tr>
-                <td style='background:#f6f6f6'><b>Estrategia</b></td>
-                <td>" . htmlspecialchars($d['estrategia_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>
-              </tr>
-              <tr>
-                <td style='background:#f6f6f6'><b>Fecha límite</b></td>
-                <td>" . htmlspecialchars($d['fecha_fin'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>
-              </tr>
-              <tr>
-                <td style='background:#f6f6f6'><b>Solicitante</b></td>
-                <td>" . htmlspecialchars($d['solicitante_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>
-              </tr>
-            </table>
-
-            <!-- BOTÓN -->
-           <table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:20px'>
-            <tr>
-              <td align='center' bgcolor='#006ec7' style='border-radius:8px'>
-                <a href='" . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . "'
-                  target='_blank'
-                  style='display:inline-block;padding:12px 18px;font-family:Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;font-weight:bold'>
-                  Revisar tarea
-                </a>
-              </td>
-            </tr>
-          </table>
-            <p style='color:#777;font-size:12px;margin-top:20px'>
-              Notificación automática · Hoshin Kanri
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td>
-  </tr>
+        <p style='color:#777;font-size:12px;margin-top:20px'>Notificación automática · Hoshin Kanri</p>
+      </td></tr>
+    </table>
+  </td></tr>
 </table>
 ";
 
-    // SOLO aprobador (sin CC)
-    $ms->sendMail($subject, $html, $mailPayload['to']);
+    $ms->sendMail($subjectAprobador, $htmlAprobador, $mailPayload['to']); // SOLO aprobador
+
+
+    /* =========================
+     2) Correo al SOLICITANTE (quien envió a revisión)
+  ========================= */
+    $toSolicitante = !empty($d['solicitante_correo']) ? [$d['solicitante_correo']] : [];
+
+    if (!empty($toSolicitante)) {
+      $subjectSol = "Tu tarea fue enviada a revisión: " . ($d['tarea_titulo'] ?? ('#' . $tareaId));
+
+      $htmlSol = "
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f6f8;padding:20px'>
+  <tr><td align='center'>
+    <table cellpadding='0' cellspacing='0' width='100%' style='max-width:720px;background:#ffffff;border-radius:8px;padding:20px;font-family:Arial,sans-serif;color:#111'>
+      <tr><td>
+        <p>Hola <b>" . htmlspecialchars($d['solicitante_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</b>,</p>
+
+        <p>
+          Tu tarea fue enviada a revisión (nivel: <b>" . htmlspecialchars($mailPayload['nivel'], ENT_QUOTES, 'UTF-8') . "</b>).
+        </p>
+
+        <p>
+          <b>La persona que revisará tu tarea es:</b>
+          <span style='color:#006ec7;font-weight:bold'>" . htmlspecialchars($d['aprobador_nombre'] ?? '', ENT_QUOTES, 'UTF-8') . "</span>.
+        </p>
+
+        <table cellpadding='8' cellspacing='0' width='100%' style='border-collapse:collapse;border:1px solid #ddd'>
+          <tr><td style='background:#f6f6f6;width:180px'><b>Tarea</b></td>
+              <td>" . htmlspecialchars($d['tarea_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . " (ID: " . (int)$d['tarea_id'] . ")</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Milestone</b></td><td>" . htmlspecialchars($d['milestone_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Estrategia</b></td><td>" . htmlspecialchars($d['estrategia_titulo'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+          <tr><td style='background:#f6f6f6'><b>Fecha límite</b></td><td>" . htmlspecialchars($d['fecha_fin'] ?? '', ENT_QUOTES, 'UTF-8') . "</td></tr>
+        </table>
+
+        <table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:20px'>
+          <tr>
+            <td align='center' bgcolor='#006ec7' style='border-radius:8px'>
+              <a href='" . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . "' target='_blank'
+                 style='display:inline-block;padding:12px 18px;font-family:Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;font-weight:bold'>
+                Ver detalle de mi envío
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style='color:#777;font-size:12px;margin-top:20px'>Notificación automática · Hoshin Kanri</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+";
+
+      $ms->sendMail($subjectSol, $htmlSol, $toSolicitante); // SOLO solicitante
+    }
   }
+
 
   echo json_encode([
     'success' => true,

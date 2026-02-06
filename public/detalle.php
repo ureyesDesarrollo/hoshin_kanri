@@ -761,7 +761,34 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
     });
   }
 
+  function formatRelativeDate(dateTimeStr) {
+    if (!dateTimeStr) return '—';
 
+    // "2026-01-21 16:43:33" → "2026-01-21T16:43:33"
+    const date = new Date(dateTimeStr.replace(' ', 'T'));
+    const now = new Date();
+
+    const diffMs = now - date;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) return 'Hace unos segundos';
+    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+    if (diffHours < 24) return `Hace ${diffHours} h`;
+
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays <= 7) return `Hace ${diffDays} días`;
+
+    // Más de 7 días → fecha completa
+    return date.toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
   function calculateDetalleDaysRemaining(endDate) {
     const end = new Date(endDate);
@@ -936,7 +963,7 @@ $tareaId = (int)($_GET['tarea_id'] ?? 0);
 
       const html = items.map((ev, index) => {
         const size = formatBytes(ev.tamano_bytes);
-        const fecha = formatDetalleDate(ev.creado_en);
+        const fecha = formatRelativeDate(ev.creado_en);
         const iconClass = getFileIconClass(ev.nombre_original);
         const fileIcon = getFileIcon(ev.nombre_original);
         const downloadUrl = `/hoshin_kanri/app/tareas/evidencias_descargar.php?evidencia_id=${ev.evidencia_id}`;
