@@ -8,11 +8,11 @@ $correo = $_POST['correo'] ?? '';
 $pass   = $_POST['password'] ?? '';
 
 if ($correo === '' || $pass === '') {
-    echo json_encode([
-        'success' => false,
-        'error' => 'Datos incompletos'
-    ]);
-    exit;
+  echo json_encode([
+    'success' => false,
+    'error' => 'Datos incompletos'
+  ]);
+  exit;
 }
 
 $conn = db();
@@ -22,7 +22,7 @@ $sql = "SELECT
     u.nombre_completo,
     u.correo,
     u.password_hash,
-
+    ue.area_id,
     e.empresa_id,
     e.nombre AS empresa_nombre,
 
@@ -53,28 +53,29 @@ $u = $res->fetch_assoc();
 
 if ($u && password_verify($pass, $u['password_hash'])) {
 
-    auth_login([
-        'usuario_id'     => (int)$u['usuario_id'],
-        'nombre'         => $u['nombre_completo'],
-        'correo'         => $u['correo'],
+  auth_login([
+    'usuario_id'     => (int)$u['usuario_id'],
+    'nombre'         => $u['nombre_completo'],
+    'correo'         => $u['correo'],
+    'area_id'        => (int)$u['area_id'],
 
-        // CONTEXTO DE NEGOCIO
-        'empresa_id'     => (int)$u['empresa_id'],
-        'empresa_nombre' => $u['empresa_nombre'],
+    // CONTEXTO DE NEGOCIO
+    'empresa_id'     => (int)$u['empresa_id'],
+    'empresa_nombre' => $u['empresa_nombre'],
 
-        'rol_id'         => (int)$u['rol_id'],
-        'rol'            => strtolower($u['rol']), // admin, director, etc.
-    ]);
+    'rol_id'         => (int)$u['rol_id'],
+    'rol'            => strtolower($u['rol']), // admin, director, etc.
+  ]);
 
-    echo json_encode([
-        'success' => true,
-        'rol' => strtolower($u['rol'])
-    ]);
-    exit;
+  echo json_encode([
+    'success' => true,
+    'rol' => strtolower($u['rol'])
+  ]);
+  exit;
 }
 
 echo json_encode([
-    'success' => false,
-    'error' => 'Credenciales incorrectas'
+  'success' => false,
+  'error' => 'Credenciales incorrectas'
 ]);
 exit;

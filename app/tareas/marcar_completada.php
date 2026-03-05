@@ -14,6 +14,7 @@ $conn = db();
 $empresaId = (int)($_SESSION['usuario']['empresa_id'] ?? 0);
 $usuarioId = (int)($_SESSION['usuario']['usuario_id'] ?? 0);
 $tareaId   = (int)($_POST['tarea_id'] ?? 0);
+$areaId    = (int)($_SESSION['usuario']['area_id'] ?? 0);
 
 if ($empresaId <= 0 || $usuarioId <= 0 || $tareaId <= 0) {
   echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
@@ -114,6 +115,13 @@ if ($tareaResp === $milestoneResp) {
   $nivel = 'estrategia';
   $aprobadorId = $estrategiaResp;
 }
+
+
+if ($areaId == 2 || $areaId == 3) {
+  $nivel = 'direccion';
+  $aprobadorId = 27;
+}
+
 
 // 5) Transacción: actualizar tarea a revisión + crear aprobación pendiente + notificar + evento
 try {
@@ -257,6 +265,12 @@ LIMIT 1
       $mailRow['aprobador_correo'] = $mailRow['aprobador_correo'];
       break;
   }
+
+  if ($areaId == 2 || $areaId == 3) {
+    $mailRow['aprobador_correo'] = 'jeronimo@progel.com.mx';
+  }
+
+
   $stmt->close();
 
   // Guardar payload para enviar DESPUÉS del commit
