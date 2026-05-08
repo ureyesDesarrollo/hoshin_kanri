@@ -35,7 +35,12 @@ if (!$row) {
 
 $usuarioEmpresaId = (int)$row['usuario_empresa_id'];
 
-$sql = "UPDATE usuarios_empresas SET activo = 0 WHERE usuario_empresa_id = ? AND empresa_id = ?";
+$sql = "UPDATE usuarios_empresas ue
+JOIN usuarios u ON u.usuario_id = ue.usuario_id
+SET ue.activo = 0,
+    u.activo = 0
+WHERE ue.usuario_empresa_id = ?
+  AND ue.empresa_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('ii', $usuarioEmpresaId, $empresaId);
 

@@ -18,19 +18,22 @@ $sql = "SELECT
   u.usuario_id,
   u.nombre_completo,
   u.correo,
-  u.activo AS usuario_activo,
+  u.activo AS usuario_global_activo,
   ue.usuario_empresa_id,
   ue.rol_id,
   r.nombre AS rol,
   ue.area_id,
   a.nombre AS area,
-  ue.activo AS usuario_empresa_activo
+  ue.activo AS usuario_empresa_activo,
+  LEAST(u.activo, ue.activo) AS usuario_activo
 FROM usuarios_empresas ue
 JOIN usuarios u ON u.usuario_id = ue.usuario_id
 JOIN roles r ON r.rol_id = ue.rol_id
 LEFT JOIN areas a ON a.area_id = ue.area_id
 WHERE ue.empresa_id = ?
   AND u.usuario_id = ?
+  AND ue.activo = 1
+  AND u.activo = 1
 LIMIT 1
 ";
 

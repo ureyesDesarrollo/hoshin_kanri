@@ -7,6 +7,7 @@ auth_require();
 
 $conn = db();
 
+$empresaId = (int)($_SESSION['usuario']['empresa_id'] ?? 0);
 $page    = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 10;
 $offset  = ($page - 1) * $perPage;
@@ -18,6 +19,13 @@ $responsable  = trim((string)($_GET['responsable'] ?? ''));    // nombre_complet
 $where = [];
 $params = [];
 $types = "";
+
+// Base obligatoria
+$where[] = "e.empresa_id = ?";
+$params[] = $empresaId;
+$types .= "i";
+
+$where[] = "u.activo = 1";
 
 // Buscar por título
 if ($q !== '') {
@@ -41,7 +49,13 @@ $whereSql = $where ? ("WHERE " . implode(" AND ", $where)) : "";
 $sqlTotal = "
 SELECT COUNT(*) AS total
 FROM tareas t
+JOIN milestones m ON m.milestone_id = t.milestone_id
+JOIN estrategias e ON e.estrategia_id = m.estrategia_id
 JOIN usuarios u ON u.usuario_id = t.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ";
 $stmt = $conn->prepare($sqlTotal);
@@ -67,7 +81,13 @@ SELECT
   t.creado_en,
   u.nombre_completo AS responsable
 FROM tareas t
+JOIN milestones m ON m.milestone_id = t.milestone_id
+JOIN estrategias e ON e.estrategia_id = m.estrategia_id
 JOIN usuarios u ON u.usuario_id = t.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ORDER BY t.tarea_id DESC
 LIMIT ? OFFSET ?

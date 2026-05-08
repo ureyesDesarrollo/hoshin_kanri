@@ -18,6 +18,10 @@ $rolId = (int)($_POST['rol_id'] ?? 0);
 $activo = isset($_POST['activo']) ? (int)$_POST['activo'] : 1;
 $areaId = (int)($_POST['area_id'] ?? 0);
 
+if (!in_array($activo, [0, 1], true)) {
+  echo json_encode(['success' => false, 'message' => 'Estatus inválido']);
+  exit;
+}
 
 if ($nombre === '' || $correo === '' || $password === '' || $rolId <= 0 || $areaId <= 0) {
   echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
@@ -70,10 +74,10 @@ try {
   // 4) Asignar a empresa
   $sqlUE = "
     INSERT INTO usuarios_empresas (empresa_id, usuario_id, rol_id, area_id, activo)
-    VALUES (?, ?, ?, ?, 1)
+    VALUES (?, ?, ?, ?, ?)
   ";
   $stmt = $conn->prepare($sqlUE);
-  $stmt->bind_param('iiii', $empresaId, $usuarioId, $rolId, $areaId);
+  $stmt->bind_param('iiiii', $empresaId, $usuarioId, $rolId, $areaId, $activo);
   if (!$stmt->execute() || $stmt->affected_rows !== 1) {
     throw new Exception('No se pudo asignar el usuario a la empresa');
   }

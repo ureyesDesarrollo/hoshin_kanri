@@ -47,7 +47,11 @@ $sql = "SELECT
 FROM estrategias e
 JOIN milestones m ON m.estrategia_id = e.estrategia_id
 JOIN tareas t ON t.milestone_id = m.milestone_id
-JOIN usuarios u ON m.responsable_usuario_id = u.usuario_id
+JOIN usuarios u ON m.responsable_usuario_id = u.usuario_id AND u.activo = 1
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 
 /* objetivos por estrategia: usar JOIN (no LEFT) para que solo salgan esos objetivos */
 JOIN objetivo_estrategia oe

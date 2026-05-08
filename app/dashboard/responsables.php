@@ -147,6 +147,7 @@ LEFT JOIN kpi_responsable_semanal ks
 
 WHERE ue.empresa_id = ?
   AND ue.activo = 1
+  AND u.activo = 1
   AND r.nombre = 'GERENTE'
 
 GROUP BY u.usuario_id

@@ -25,9 +25,13 @@ SELECT
   u.nombre AS responsable_tarea
 FROM tarea_aprobaciones ta
 JOIN tareas t ON t.tarea_id = ta.tarea_id
-JOIN usuarios u ON u.usuario_id = t.responsable_usuario_id
+JOIN usuarios u ON u.usuario_id = t.responsable_usuario_id AND u.activo = 1
 JOIN milestones m ON m.milestone_id = t.milestone_id
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
+JOIN usuarios_empresas ue_resp
+  ON ue_resp.usuario_id = u.usuario_id
+ AND ue_resp.empresa_id = e.empresa_id
+ AND ue_resp.activo = 1
 WHERE ta.estatus = 1
   AND ta.aprobador_usuario_id = ?
   AND e.empresa_id = ?

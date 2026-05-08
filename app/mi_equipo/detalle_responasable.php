@@ -43,7 +43,7 @@ FROM estrategias e
 JOIN milestones m ON m.estrategia_id = e.estrategia_id
 JOIN tareas t ON t.milestone_id = m.milestone_id
 
-JOIN usuarios ru ON ru.usuario_id = t.responsable_usuario_id
+JOIN usuarios ru ON ru.usuario_id = t.responsable_usuario_id AND ru.activo = 1
 JOIN usuarios_empresas ue ON ue.usuario_id = ru.usuario_id AND ue.activo = 1 AND ue.empresa_id = e.empresa_id
 JOIN roles rr ON rr.rol_id = ue.rol_id
 LEFT JOIN areas aa ON aa.area_id = ue.area_id

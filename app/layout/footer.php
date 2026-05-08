@@ -10,7 +10,7 @@
 <script src="../public/js/dashboard/dashboard.js"></script>
 <script src="../public/js/objetivos/objetivos.js"></script>
 <script src="../public/js/estrategias/estrategias.js"></script>
-<script src="../public/js/responsables/responsables.js"></script>
+<script src="../public/js/responsables/responsables.js?v=<?= filemtime(__DIR__ . '/../../public/js/responsables/responsables.js') ?>"></script>
 <script src="../public/js/milestones/milestones.js"></script>
 <script src="../public/js/tareas/tareas.js"></script>
 <script src="../public/js/utils/utils.js"></script>

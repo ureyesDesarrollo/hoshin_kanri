@@ -26,6 +26,8 @@ $where[] = "o.empresa_id = ?";
 $params[] = $empresaId;
 $types .= "i";
 
+$where[] = "u.activo = 1";
+
 // Periodo opcional
 $where[] = "(? = 0 OR o.periodo_id = ?)";
 $params[] = $periodoId;
@@ -55,6 +57,10 @@ $sqlTotal = "
 SELECT COUNT(*) AS total
 FROM objetivos o
 JOIN usuarios u ON u.usuario_id = o.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = o.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ";
 
@@ -76,6 +82,10 @@ SELECT
     u.correo AS responsable_email
 FROM objetivos o
 JOIN usuarios u ON u.usuario_id = o.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = o.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ORDER BY o.creado_en DESC
 LIMIT ? OFFSET ?

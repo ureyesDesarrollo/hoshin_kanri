@@ -67,13 +67,40 @@ SELECT
   END AS dias_atraso
 
 FROM tareas t
-JOIN usuarios ur ON ur.usuario_id = t.responsable_usuario_id
 JOIN milestones m ON m.milestone_id = t.milestone_id
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
+JOIN usuarios ur
+  ON ur.usuario_id = t.responsable_usuario_id
+ AND ur.activo = 1
+ AND EXISTS (
+    SELECT 1
+    FROM usuarios_empresas ue_ur
+    WHERE ue_ur.usuario_id = ur.usuario_id
+      AND ue_ur.empresa_id = e.empresa_id
+      AND ue_ur.activo = 1
+ )
 LEFT JOIN objetivo_estrategia oe ON oe.estrategia_id = e.estrategia_id
 LEFT JOIN objetivos o ON o.objetivo_id = oe.objetivo_id AND o.empresa_id = e.empresa_id
-LEFT JOIN usuarios ur2 ON ur2.usuario_id = m.responsable_usuario_id
-LEFT JOIN usuarios ur3 ON ur3.usuario_id = e.responsable_usuario_id
+LEFT JOIN usuarios ur2
+  ON ur2.usuario_id = m.responsable_usuario_id
+ AND ur2.activo = 1
+ AND EXISTS (
+    SELECT 1
+    FROM usuarios_empresas ue_ur2
+    WHERE ue_ur2.usuario_id = ur2.usuario_id
+      AND ue_ur2.empresa_id = e.empresa_id
+      AND ue_ur2.activo = 1
+ )
+LEFT JOIN usuarios ur3
+  ON ur3.usuario_id = e.responsable_usuario_id
+ AND ur3.activo = 1
+ AND EXISTS (
+    SELECT 1
+    FROM usuarios_empresas ue_ur3
+    WHERE ue_ur3.usuario_id = ur3.usuario_id
+      AND ue_ur3.empresa_id = e.empresa_id
+      AND ue_ur3.activo = 1
+ )
 
 WHERE t.tarea_id = ?
   AND e.empresa_id = ?

@@ -121,6 +121,8 @@ function limpiarFormulario() {
     $('#nombre_completo').val('');
     $('#correo').val('');
     $('#rol_id').val('');
+    $('#area_id').val('');
+    $('#activo').val('1');
     $('#password').val('');
 }
 
@@ -141,6 +143,8 @@ $(document).ready(function () {
     }
 
     $('#btnNuevoUsuario, #btnNuevoUsuarioTabla').on('click', function () {
+        limpiarFormulario();
+        $('#modalTitulo').text('Nuevo usuario');
         modalUsu.show();
         loadAreas();
     });
@@ -164,6 +168,7 @@ $(document).ready(function () {
             $('#nombre_completo').val(u.nombre_completo);
             $('#correo').val(u.correo);
             $('#rol_id').val(u.rol_id);
+            $('#activo').val(u.usuario_activo);
             $('#password').val('');
             loadAreas(u.area_id);
             modalUsu.show();
@@ -181,6 +186,7 @@ $(document).ready(function () {
         const rolId = ($('#rol_id').val() || '').trim();
         const password = ($('#password').val() || '').trim();
         const areaId = ($('#area_id').val() || '').trim();
+        const activo = ($('#activo').val() || '1').trim();
 
         if (!areaId) {
             Swal.fire({
@@ -219,7 +225,8 @@ $(document).ready(function () {
                     correo: correo,
                     rol_id: rolId,
                     password: password,
-                    area_id: areaId
+                    area_id: areaId,
+                    activo: activo
                 },
                 success: function (resp) {
                     if (!resp.success) {
@@ -250,7 +257,8 @@ $(document).ready(function () {
                     correo: correo,
                     rol_id: rolId,
                     password: password,
-                    area_id: areaId
+                    area_id: areaId,
+                    activo: activo
                 },
                 success: function (resp) {
                     if (!resp.success) {

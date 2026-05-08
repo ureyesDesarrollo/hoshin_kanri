@@ -3,6 +3,30 @@ let filtroEstrategia = "";
 let filtroResponsable = "";
 let searchTimerMile = null;
 
+const milestoneEstatusCatalog = {
+  1: { label: "Activo", className: "bg-success" },
+  2: { label: "Cerrado", className: "bg-secondary" },
+  3: { label: "Inactivo", className: "bg-danger" },
+  4: { label: "Pausado", className: "bg-warning text-dark" },
+  5: { label: "Descontinuado", className: "bg-dark" },
+};
+
+function badgeEstatusMilestone(estatus) {
+  const item = milestoneEstatusCatalog[parseInt(estatus, 10)];
+
+  if (!item) return '<span class="badge bg-light text-muted">Sin estatus</span>';
+
+  return `<span class="badge ${item.className}">${item.label}</span>`;
+}
+
+function mostrarEstatusMilestone() {
+  $("#milestoneEstatusWrapper").removeClass("d-none").show();
+}
+
+function ocultarEstatusMilestone() {
+  $("#milestoneEstatusWrapper").addClass("d-none").hide();
+}
+
 function loadMilestonesStats() {
   $.get(
     "/hoshin_kanri/app/milestone/stats.php",
@@ -59,7 +83,7 @@ function loadMilestones(page = 1) {
                             </div>
                         </div>
                     </td>
-                    <td>${badgeEstatus(e.estatus)}</td>
+                    <td>${badgeEstatusMilestone(e.estatus)}</td>
                     <td>${formatFecha(e.creado_en)}</td>
                     <td class="text-end pe-4">
                         <button class="btn btn-sm btn-outline-primary btnEditarMilestone" data-id="${e.milestone_id}">
@@ -162,6 +186,8 @@ function openEditMilestone(data) {
   $("#milestoneDescripcion").val(data.descripcion);
   $("#milestoneResponsable").val(data.responsable_usuario_id);
   $("#milestonePrioridad").val(data.prioridad);
+  $("#milestoneEstatus").val(data.estatus || 1);
+  mostrarEstatusMilestone();
   initResponsablesTomSelect("#milestoneResponsable", "#modalMilestone");
   loadResponsables("#milestoneResponsable", data.responsable_usuario_id);
 
@@ -195,6 +221,10 @@ function limpiarCamposMilestone() {
   $("#milestoneTitulo").val("");
   $("#milestoneDescripcion").val("");
   $("#milestoneResponsable").val("");
+  $("#milestonePrioridad").val("2");
+  $("#milestoneEstatus").val("1");
+  ocultarEstatusMilestone();
+  $("#modalTitulo").text("Nuevo Milestone");
 }
 
 $(document).ready(function () {
@@ -259,6 +289,7 @@ $(document).ready(function () {
   });
 
   $("#btnNuevoMilestone , #btnNuevoMilestoneTabla").on("click", function () {
+    limpiarCamposMilestone();
     loadObjetivosModalMilestone();
     initResponsablesTomSelect("#milestoneResponsable", "#modalMilestone");
     loadResponsables("#milestoneResponsable", 0);
@@ -296,6 +327,7 @@ $(document).ready(function () {
     const descripcion = $("#milestoneDescripcion").val();
     const milestone_id = $("#milestoneId").val();
     const prioridad = $("#milestonePrioridad").val();
+    const estatus = $("#milestoneEstatus").val();
 
     if (milestone_id) {
       $.ajax({
@@ -307,6 +339,7 @@ $(document).ready(function () {
           responsable_id,
           estrategia_id,
           prioridad,
+          estatus,
           milestone_id,
         },
         success: function (resp) {

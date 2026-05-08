@@ -147,6 +147,7 @@ FROM (
 
   WHERE ue.empresa_id = ?
     AND ue.activo = 1
+    AND u.activo = 1
     AND r.nombre = 'GERENTE'
 ) x
 GROUP BY x.usuario_id

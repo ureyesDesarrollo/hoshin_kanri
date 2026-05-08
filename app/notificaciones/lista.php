@@ -36,6 +36,14 @@ LEFT JOIN estrategias e
   ON e.estrategia_id = m.estrategia_id
 LEFT JOIN usuarios ur
   ON ur.usuario_id = t.responsable_usuario_id
+ AND ur.activo = 1
+ AND EXISTS (
+    SELECT 1
+    FROM usuarios_empresas ue_ur
+    WHERE ue_ur.usuario_id = ur.usuario_id
+      AND ue_ur.empresa_id = e.empresa_id
+      AND ue_ur.activo = 1
+ )
 ";
 
 $where = "WHERE n.usuario_id = ?";
@@ -55,7 +63,8 @@ if ($f === 'unread') {
   $where .= " AND ur.nombre_completo IN (
     SELECT u.nombre_completo
     FROM usuarios u
-    WHERE u.nombre_completo IS NOT NULL AND u.nombre_completo <> ''
+    WHERE u.activo = 1
+      AND u.nombre_completo IS NOT NULL AND u.nombre_completo <> ''
     GROUP BY u.nombre_completo
     HAVING COUNT(*) > 1
   )";

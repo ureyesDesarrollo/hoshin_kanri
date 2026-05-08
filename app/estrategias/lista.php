@@ -26,6 +26,7 @@ $params[] = $empresaId;
 $types .= "i";
 
 $where[] = "e.vigente = 1";
+$where[] = "u.activo = 1";
 
 // Por título
 if ($q !== '') {
@@ -50,6 +51,10 @@ $sqlTotal = "
 SELECT COUNT(DISTINCT e.estrategia_id) AS total
 FROM estrategias e
 JOIN usuarios u ON u.usuario_id = e.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ";
 
@@ -71,6 +76,10 @@ SELECT DISTINCT
   e.creado_en
 FROM estrategias e
 JOIN usuarios u ON u.usuario_id = e.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ORDER BY e.estrategia_id DESC
 LIMIT ? OFFSET ?

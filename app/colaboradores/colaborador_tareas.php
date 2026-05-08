@@ -131,6 +131,7 @@ JOIN estrategias e
  AND e.empresa_id = ?
 
 WHERE u.usuario_id = ?
+  AND u.activo = 1
 GROUP BY u.usuario_id, u.nombre_completo, r.nombre, a.nombre
 ";
 

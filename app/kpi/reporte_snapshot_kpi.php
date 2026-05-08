@@ -111,6 +111,7 @@ LEFT JOIN areas a ON a.area_id = ue.area_id
 WHERE ks.empresa_id = ?
   AND ks.generado_en = ?
   AND ks.semana_inicio <> '0000-00-00'
+  AND u.activo = 1
   AND r.nombre = 'GERENTE'
 ";
 $stmt = $conn->prepare($sql);

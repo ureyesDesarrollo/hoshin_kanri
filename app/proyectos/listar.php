@@ -50,10 +50,14 @@ SELECT
 
 FROM milestones m
 JOIN tareas t ON t.milestone_id = m.milestone_id
-JOIN usuarios u ON m.responsable_usuario_id = u.usuario_id
+JOIN usuarios u ON m.responsable_usuario_id = u.usuario_id AND u.activo = 1
 
 /* seguridad por empresa */
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id AND e.empresa_id = ?
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 
 /* objetivo por estrategia */
 LEFT JOIN objetivo_estrategia oe ON oe.estrategia_id = e.estrategia_id

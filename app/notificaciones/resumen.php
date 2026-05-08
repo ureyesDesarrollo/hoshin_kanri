@@ -58,6 +58,14 @@ LEFT JOIN estrategias e
   ON e.estrategia_id = m.estrategia_id
 LEFT JOIN usuarios ur
   ON ur.usuario_id = t.responsable_usuario_id
+ AND ur.activo = 1
+ AND EXISTS (
+    SELECT 1
+    FROM usuarios_empresas ue_ur
+    WHERE ue_ur.usuario_id = ur.usuario_id
+      AND ue_ur.empresa_id = e.empresa_id
+      AND ue_ur.activo = 1
+ )
 
 WHERE n.usuario_id=?
 ORDER BY n.creada_en DESC

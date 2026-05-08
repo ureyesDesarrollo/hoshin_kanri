@@ -54,8 +54,13 @@ SELECT
 
 FROM kpi_responsable_semanal k
 JOIN usuarios u ON u.usuario_id = k.usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = k.empresa_id
+ AND ue.activo = 1
 WHERE k.empresa_id = ?
   AND k.semana_inicio BETWEEN ? AND ?
+  AND u.activo = 1
 GROUP BY u.usuario_id
 ORDER BY porcentaje_general ASC, total_tareas DESC
 ";
@@ -72,18 +77,24 @@ $general = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 /** Serie por semana (para gráfica) */
 $sqlSerie = "
 SELECT
-  usuario_id,
-  semana_inicio,
-  semana_fin,
-  total_tareas,
-  cumplidas_a_tiempo,
-  vencidas_no_cumplidas,
-  completadas_tarde,
-  porcentaje
-FROM kpi_responsable_semanal
-WHERE empresa_id = ?
-  AND semana_inicio BETWEEN ? AND ?
-ORDER BY usuario_id, semana_inicio
+  k.usuario_id,
+  k.semana_inicio,
+  k.semana_fin,
+  k.total_tareas,
+  k.cumplidas_a_tiempo,
+  k.vencidas_no_cumplidas,
+  k.completadas_tarde,
+  k.porcentaje
+FROM kpi_responsable_semanal k
+JOIN usuarios u ON u.usuario_id = k.usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = k.empresa_id
+ AND ue.activo = 1
+WHERE k.empresa_id = ?
+  AND k.semana_inicio BETWEEN ? AND ?
+  AND u.activo = 1
+ORDER BY k.usuario_id, k.semana_inicio
 ";
 
 $stmt2 = $conn->prepare($sqlSerie);

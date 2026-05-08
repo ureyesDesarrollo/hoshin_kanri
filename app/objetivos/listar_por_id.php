@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 auth_require();
 
 $conn = db();
+$empresaId = (int)$_SESSION['usuario']['empresa_id'];
 $objetivoId = (int)$_GET['objetivo_id'];
 
 $sql = "
@@ -19,13 +20,20 @@ SELECT
     o.responsable_usuario_id
 FROM objetivos o
 JOIN usuarios u ON u.usuario_id = o.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = o.empresa_id
+ AND ue.activo = 1
 WHERE o.objetivo_id = ?
+  AND o.empresa_id = ?
+  AND u.activo = 1
 ";
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param(
-    'i',
-    $objetivoId
+    'ii',
+    $objetivoId,
+    $empresaId
 );
 $stmt->execute();
 

@@ -7,6 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 auth_require();
 
 $conn = db();
+$empresaId = (int)$_SESSION['usuario']['empresa_id'];
 
 $data = [];
 
@@ -34,9 +35,11 @@ JOIN roles r
 WHERE
     u.activo = 1
     AND ue.activo = 1
-    AND e.activa = 1";
+    AND e.activa = 1
+    AND ue.empresa_id = ?";
 
 $stmt = $conn->prepare($sql);
+$stmt->bind_param('i', $empresaId);
 $stmt->execute();
 $res = $stmt->get_result();
 $data = $res->fetch_all(MYSQLI_ASSOC);

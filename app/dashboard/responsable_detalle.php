@@ -42,15 +42,19 @@ SELECT
     ) AS vencidas_total
 
 FROM usuarios u
-JOIN usuarios_empresas ue ON ue.usuario_id = u.usuario_id AND ue.activo = 1
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.activo = 1
+ AND ue.empresa_id = ?
 JOIN roles r ON r.rol_id = ue.rol_id
 LEFT JOIN areas a ON a.area_id = ue.area_id
 
-JOIN estrategias e ON e.responsable_usuario_id = u.usuario_id
+JOIN estrategias e ON e.responsable_usuario_id = u.usuario_id AND e.empresa_id = ue.empresa_id
 JOIN milestones m ON m.estrategia_id = e.estrategia_id
 JOIN tareas t ON t.milestone_id = m.milestone_id
 
 WHERE u.usuario_id = ?
+  AND u.activo = 1
 GROUP BY u.usuario_id, u.nombre_completo, r.nombre, a.nombre
 ";
 
@@ -59,7 +63,7 @@ if (!$stmt) {
   echo json_encode(['success' => false, 'msg' => 'Error prepare resumen: ' . $conn->error], JSON_UNESCAPED_UNICODE);
   exit;
 }
-$stmt->bind_param('i', $usuarioId);
+$stmt->bind_param('ii', $empresaId, $usuarioId);
 
 if (!$stmt->execute()) {
   echo json_encode(['success' => false, 'msg' => 'Error execute resumen: ' . $stmt->error], JSON_UNESCAPED_UNICODE);

@@ -19,6 +19,11 @@ $activo = isset($_POST['activo']) ? (int)$_POST['activo'] : null;
 $password = trim((string)($_POST['password'] ?? ''));
 $areaId = (int)($_POST['area_id'] ?? 0);
 
+if ($activo !== null && !in_array($activo, [0, 1], true)) {
+    echo json_encode(['success' => false, 'message' => 'Estatus inválido']);
+    exit;
+}
+
 if ($usuarioId <= 0 || $nombre === '' || $correo === '' || $rolId <= 0 || $areaId <= 0) {
     echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
     exit;
@@ -30,10 +35,11 @@ SELECT
   u.usuario_id,
   u.nombre_completo,
   u.correo,
-  u.activo AS usuario_activo,
+  u.activo AS usuario_global_activo,
   ue.usuario_empresa_id,
   ue.rol_id,
-  ue.area_id
+  ue.area_id,
+  ue.activo AS usuario_empresa_activo
 FROM usuarios_empresas ue
 JOIN usuarios u ON u.usuario_id = ue.usuario_id
 WHERE ue.empresa_id = ?
@@ -71,16 +77,18 @@ try {
         }
     }
 
+    $estatusUsuarioNuevo = $activo ?? (int)$cur['usuario_global_activo'];
+
     // Update usuarios
     if ($password !== '') {
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $sqlU = "UPDATE usuarios SET nombre_completo=?, correo=?, password_hash=?, activo=COALESCE(?, activo) WHERE usuario_id=?";
+        $sqlU = "UPDATE usuarios SET nombre_completo=?, correo=?, password_hash=?, activo=? WHERE usuario_id=?";
         $stmt = $conn->prepare($sqlU);
-        $stmt->bind_param('sssii', $nombre, $correo, $hash, $activo, $usuarioId);
+        $stmt->bind_param('sssii', $nombre, $correo, $hash, $estatusUsuarioNuevo, $usuarioId);
     } else {
-        $sqlU = "UPDATE usuarios SET nombre_completo=?, correo=?, activo=COALESCE(?, activo) WHERE usuario_id=?";
+        $sqlU = "UPDATE usuarios SET nombre_completo=?, correo=?, activo=? WHERE usuario_id=?";
         $stmt = $conn->prepare($sqlU);
-        $stmt->bind_param('ssii', $nombre, $correo, $activo, $usuarioId);
+        $stmt->bind_param('ssii', $nombre, $correo, $estatusUsuarioNuevo, $usuarioId);
     }
 
     if (!$stmt->execute()) throw new Exception('No se pudo actualizar usuario');
@@ -88,9 +96,13 @@ try {
     // Auditoría cambios básicos (simple, sin comparar campo por campo)
     auditar($conn, $empresaId, 'usuario', $usuarioId, 'EDITAR', $editadoPor);
 
-    // Update rol y area en usuarios_empresas (si cambió)
+    // Update rol, area y estatus en usuarios_empresas (si cambió)
     $usuarioEmpresaId = (int)$cur['usuario_empresa_id'];
-    if ((int)$cur['rol_id'] !== $rolId || (int)$cur['area_id'] !== $areaId) {
+    $estatusEmpresaActual = (int)$cur['usuario_empresa_activo'];
+    $estatusEmpresaNuevo = $activo ?? $estatusEmpresaActual;
+    $cambioEstatus = $activo !== null && $estatusEmpresaActual !== $activo;
+
+    if ((int)$cur['rol_id'] !== $rolId || (int)$cur['area_id'] !== $areaId || $cambioEstatus) {
         // validar rol
         $stmt = $conn->prepare("SELECT rol_id FROM roles WHERE rol_id = ? LIMIT 1");
         $stmt->bind_param('i', $rolId);
@@ -107,9 +119,9 @@ try {
             throw new Exception('area_id inválido');
         }
 
-        $stmt = $conn->prepare("UPDATE usuarios_empresas SET rol_id=?, area_id=? WHERE usuario_empresa_id=? AND empresa_id=?");
-        $stmt->bind_param('iiii', $rolId, $areaId, $usuarioEmpresaId, $empresaId);
-        if (!$stmt->execute()) throw new Exception('No se pudo actualizar rol y area');
+        $stmt = $conn->prepare("UPDATE usuarios_empresas SET rol_id=?, area_id=?, activo=? WHERE usuario_empresa_id=? AND empresa_id=?");
+        $stmt->bind_param('iiiii', $rolId, $areaId, $estatusEmpresaNuevo, $usuarioEmpresaId, $empresaId);
+        if (!$stmt->execute()) throw new Exception('No se pudo actualizar rol, area y estatus');
 
         auditar($conn, $empresaId, 'usuario_empresa', $usuarioEmpresaId, 'EDITAR', $editadoPor);
     }

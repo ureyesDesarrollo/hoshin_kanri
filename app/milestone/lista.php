@@ -25,6 +25,8 @@ $where[] = "e.empresa_id = ?";
 $params[] = $empresaId;
 $types .= "i";
 
+$where[] = "u.activo = 1";
+
 // Por título milestone
 if ($q !== '') {
   $where[] = "m.titulo LIKE ?";
@@ -49,6 +51,10 @@ SELECT COUNT(*) AS total
 FROM milestones m
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
 JOIN usuarios u ON u.usuario_id = m.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ";
 
@@ -73,6 +79,10 @@ SELECT
 FROM milestones m
 JOIN estrategias e ON e.estrategia_id = m.estrategia_id
 JOIN usuarios u ON u.usuario_id = m.responsable_usuario_id
+JOIN usuarios_empresas ue
+  ON ue.usuario_id = u.usuario_id
+ AND ue.empresa_id = e.empresa_id
+ AND ue.activo = 1
 {$whereSql}
 ORDER BY m.milestone_id DESC
 LIMIT ? OFFSET ?

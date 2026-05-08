@@ -24,6 +24,13 @@ if ($milestoneId <= 0 || $titulo === '' || $responsable <= 0 || $estrategia_id <
   exit;
 }
 
+$estatusPermitidos = [1, 2, 3, 4, 5];
+
+if (!in_array($estatus, $estatusPermitidos, true)) {
+  echo json_encode(['success' => false, 'message' => 'Estatus inválido']);
+  exit;
+}
+
 /* Estado actual */
 $stmt = $conn->prepare("
     SELECT titulo, descripcion, responsable_usuario_id, estatus, estrategia_id

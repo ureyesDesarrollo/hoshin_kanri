@@ -245,6 +245,21 @@ require_once '../app/layout/sidebar.php';
           </select>
         </div>
 
+        <!-- ESTATUS -->
+        <div class="mb-3" id="milestoneEstatusWrapper">
+          <label class="form-label fw-semibold">
+            Estatus <span class="text-danger">*</span>
+          </label>
+          <select id="milestoneEstatus"
+            class="form-select">
+            <option value="1">Activo</option>
+            <option value="2">Cerrado</option>
+            <option value="3">Inactivo</option>
+            <option value="4">Pausado</option>
+            <option value="5">Descontinuado</option>
+          </select>
+        </div>
+
         <!-- DESCRIPCIÓN -->
         <div class="mb-3">
           <label class="form-label fw-semibold">

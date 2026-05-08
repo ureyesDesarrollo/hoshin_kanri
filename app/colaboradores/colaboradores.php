@@ -124,6 +124,7 @@ LEFT JOIN estrategias e ON e.estrategia_id = m.estrategia_id AND e.empresa_id = 
 
 WHERE ue.empresa_id = ?
   AND ue.activo = 1
+  AND u.activo = 1
   AND ue.rol_id NOT IN (1, 2)
   AND (t.tarea_id IS NULL OR e.empresa_id = ue.empresa_id)
 
