@@ -86,6 +86,9 @@ function loadMilestones(page = 1) {
                     <td>${badgeEstatusMilestone(e.estatus)}</td>
                     <td>${formatFecha(e.creado_en)}</td>
                     <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-success btnPromoverDirectivo me-1" data-id="${e.milestone_id}" title="Enviar a gestión directiva">
+                            <i class="fas fa-briefcase me-1"></i>Dirección
+                        </button>
                         <button class="btn btn-sm btn-outline-primary btnEditarMilestone" data-id="${e.milestone_id}">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -311,6 +314,46 @@ $(document).ready(function () {
         openEditMilestone(m);
       },
     );
+  });
+
+  $("#tablaMilestones").on("click", ".btnPromoverDirectivo", function () {
+    const id = $(this).data("id");
+
+    Swal.fire({
+      title: "¿Enviar a Gestión Directiva?",
+      text: "El milestone seguirá funcionando igual en HK, pero aparecerá en el portafolio ejecutivo.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, enviar",
+      cancelButtonText: "Cancelar",
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      $.post(
+        "/hoshin_kanri/app/proyectos_directivos/promover.php",
+        { milestone_id: id },
+        function (resp) {
+          if (!resp.success) {
+            Swal.fire("Error", resp.message || "No se pudo enviar a Dirección", "error");
+            return;
+          }
+
+          Swal.fire({
+            icon: "success",
+            title: "Listo",
+            text: resp.message,
+            showCancelButton: true,
+            confirmButtonText: "Ver portafolio",
+            cancelButtonText: "Seguir aquí",
+          }).then((r) => {
+            if (r.isConfirmed) {
+              window.location.href = "/hoshin_kanri/public/gestion_directiva.php";
+            }
+          });
+        },
+        "json",
+      );
+    });
   });
 
   $("#btnGuardarMilestone").on("click", function () {

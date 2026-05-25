@@ -108,7 +108,7 @@ require_once '../app/layout/sidebar.php';
                 <th class="py-3 fw-semibold text-dark border-bottom-0">Responsable</th>
                 <th class="py-3 fw-semibold text-dark border-bottom-0">Estatus</th>
                 <th class="py-3 fw-semibold text-dark border-bottom-0">Creado</th>
-                <th class="pe-4 py-3 fw-semibold text-dark border-bottom-0 text-end" style="border-top-right-radius: 12px;" width="140">Acciones</th>
+                <th class="pe-4 py-3 fw-semibold text-dark border-bottom-0 text-end" style="border-top-right-radius: 12px;" width="230">Acciones</th>
               </tr>
             </thead>
             <tbody>

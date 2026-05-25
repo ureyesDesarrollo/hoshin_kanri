@@ -254,6 +254,15 @@ require_once '../app/layout/sidebar.php';
             class="form-control"></textarea>
         </div>
 
+        <!-- SEPARADOR DEPENDENCIAS -->
+        <hr class="my-4">
+        
+        <!-- DEPENDENCIAS -->
+        <div id="formularioDependenciaContainer"></div>
+        
+        <!-- MOSTRAR DEPENDENCIAS ACTUALES -->
+        <div id="dependenciasContainer"></div>
+
       </div>
 
       <!-- FOOTER -->

@@ -20,7 +20,7 @@ class MailSender
     $this->mail->Host = 'smtp.office365.com'; // Servidor SMTP
     $this->mail->SMTPAuth = true;
     $this->mail->Username = 'sistemapreparacion@progel.com.mx'; // Usuario SMTP
-    $this->mail->Password = 'Progel#2023'; // Contraseña SMTP
+    $this->mail->Password = 'Progel#2026'; // Contraseña SMTP
     $this->mail->SMTPSecure = 'tls'; // Encriptación
     $this->mail->Port = 587; // Puerto SMTP
     $this->mail->CharSet = 'UTF-8'; // Codificación de caracteres

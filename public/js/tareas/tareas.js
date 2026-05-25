@@ -321,6 +321,13 @@ $(document).ready(function () {
         loadMilestonesModal(t.milestone_id);
         initResponsablesTomSelect("#tareaResponsable", "#modalTarea");
         loadResponsables("#tareaResponsable", t.responsable_usuario_id);
+        
+        // Cargar dependencias de la tarea
+        if (typeof mostrarDependencias === 'function') {
+          mostrarDependencias(t.tarea_id);
+            mostrarFormularioDependencia(t.tarea_id, '#formularioDependenciaContainer', t.milestone_id);
+        }
+        
         modalTarea.show();
       },
     );

@@ -8,6 +8,63 @@ auth_require();
 $conn = db();
 
 $empresaId = (int)($_SESSION['usuario']['empresa_id'] ?? 0);
+
+// Verificar si es para selector de dependencias
+$paraDependencia = (int)($_GET['para_dependencia'] ?? 0);
+$excluir = (int)($_GET['excluir'] ?? 0);
+$milestoneId = (int)($_GET['milestone_id'] ?? 0);
+
+if ($paraDependencia) {
+  // Retornar todas las tareas sin paginar para el selector de dependencias
+  $whereDep = ["e.empresa_id = ?"];
+  $paramsDep = [$empresaId];
+  $typesDep = "i";
+
+  if ($excluir > 0) {
+    $whereDep[] = "t.tarea_id != ?";
+    $paramsDep[] = $excluir;
+    $typesDep .= "i";
+  }
+
+  // Filtrar por milestone si se especifica
+  if ($milestoneId > 0) {
+    $whereDep[] = "t.milestone_id = ?";
+    $paramsDep[] = $milestoneId;
+    $typesDep .= "i";
+  }
+
+  $whereSqlDep = implode(" AND ", $whereDep);
+
+  $sqlDep = "
+  SELECT
+    t.tarea_id,
+    t.titulo,
+    t.fecha_inicio,
+    t.fecha_fin,
+    t.completada,
+    u.nombre_completo AS responsable,
+    m.titulo AS milestone_titulo
+  FROM tareas t
+  JOIN milestones m ON m.milestone_id = t.milestone_id
+  JOIN estrategias e ON e.estrategia_id = m.estrategia_id
+  JOIN usuarios u ON u.usuario_id = t.responsable_usuario_id
+  WHERE {$whereSqlDep}
+  ORDER BY t.titulo ASC
+  ";
+
+  $stmtDep = $conn->prepare($sqlDep);
+  $stmtDep->bind_param($typesDep, ...$paramsDep);
+  $stmtDep->execute();
+  $tareasDep = $stmtDep->get_result()->fetch_all(MYSQLI_ASSOC);
+  $stmtDep->close();
+
+  echo json_encode([
+    'success' => true,
+    'tareas' => $tareasDep
+  ]);
+  exit;
+}
+
 $page    = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 10;
 $offset  = ($page - 1) * $perPage;

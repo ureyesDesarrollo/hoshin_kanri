@@ -14,6 +14,9 @@ $descripcion  = trim($_POST['descripcion'] ?? '');
 $responsable  = (int)($_POST['responsable_id'] ?? 0);
 $fechaInicio  = $_POST['fecha_inicio'] ?? '';
 $fechaFin     = $_POST['fecha_fin'] ?? '';
+$tareaDependienteId = (int)($_POST['tarea_dependiente_id'] ?? 0);
+$tipoRelacion = $_POST['tipo_relacion'] ?? 'FS';
+$diasDesfase  = (int)($_POST['dias_desfase'] ?? 0);
 
 $empresaId = (int)$_SESSION['usuario']['empresa_id'];
 $usuarioId = (int)$_SESSION['usuario']['usuario_id'];
@@ -85,6 +88,44 @@ auditar(
   'CREAR',
   $usuarioId
 );
+
+// Guardar dependencia si se proporciona
+if ($tareaDependienteId > 0) {
+  // Verificar que la tarea dependiente existe
+  $stmt = $conn->prepare("SELECT tarea_id FROM tareas WHERE tarea_id = ? LIMIT 1");
+  $stmt->bind_param('i', $tareaDependienteId);
+  $stmt->execute();
+  if ($stmt->get_result()->num_rows > 0) {
+    $stmt->close();
+    
+    // Insertar dependencia
+    $stmt = $conn->prepare("
+      INSERT INTO tarea_dependencias (
+        tarea_id,
+        tarea_dependiente_id,
+        tipo_relacion,
+        dias_desfase
+      ) VALUES (?, ?, ?, ?)
+    ");
+    
+    $stmt->bind_param('iisi', $tareaId, $tareaDependienteId, $tipoRelacion, $diasDesfase);
+    $stmt->execute();
+    $dependenciaId = $conn->insert_id;
+    $stmt->close();
+    
+    // Auditar la dependencia
+    auditar(
+      $conn,
+      $empresaId,
+      'tarea_dependencia',
+      $dependenciaId,
+      'CREAR',
+      $usuarioId
+    );
+  } else {
+    $stmt->close();
+  }
+}
 
 echo json_encode(['success' => true]);
 exit;

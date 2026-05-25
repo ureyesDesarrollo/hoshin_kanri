@@ -11,8 +11,11 @@
 <script src="../public/js/objetivos/objetivos.js"></script>
 <script src="../public/js/estrategias/estrategias.js"></script>
 <script src="../public/js/responsables/responsables.js?v=<?= filemtime(__DIR__ . '/../../public/js/responsables/responsables.js') ?>"></script>
-<script src="../public/js/milestones/milestones.js"></script>
+<script src="../public/js/milestones/milestones.js?v=<?= filemtime(__DIR__ . '/../../public/js/milestones/milestones.js') ?>"></script>
+<script src="../public/js/proyectos_directivos/gestion_directiva.js?v=<?= filemtime(__DIR__ . '/../../public/js/proyectos_directivos/gestion_directiva.js') ?>"></script>
+<script src="../public/js/proyectos_directivos/catalogos_directivos.js?v=<?= filemtime(__DIR__ . '/../../public/js/proyectos_directivos/catalogos_directivos.js') ?>"></script>
 <script src="../public/js/tareas/tareas.js"></script>
+<script src="../public/js/tareas/dependencias.js"></script>
 <script src="../public/js/utils/utils.js"></script>
 <script>
     $(document).ready(function() {

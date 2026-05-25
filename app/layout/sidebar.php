@@ -80,6 +80,24 @@ $paginaActual = basename($_SERVER['PHP_SELF']);
             </li>
         <?php endif; ?>
 
+        <?php if (puede('gestion_directiva')): ?>
+            <li class="nav-item">
+                <a href="gestion_directiva.php"
+                    class="nav-link <?= $paginaActual === 'gestion_directiva.php' ? 'active' : '' ?>">
+                    <i class="fas fa-briefcase"></i> Gestión Directiva
+                </a>
+            </li>
+        <?php endif; ?>
+
+        <?php if (puede('catalogos_directivos')): ?>
+            <li class="nav-item">
+                <a href="catalogos_directivos.php"
+                    class="nav-link <?= $paginaActual === 'catalogos_directivos.php' ? 'active' : '' ?>">
+                    <i class="fas fa-layer-group"></i> Catálogos Directivos
+                </a>
+            </li>
+        <?php endif; ?>
+
         <?php if (puede('tareas')): ?>
             <li class="nav-item">
                 <a href="tareas.php"
